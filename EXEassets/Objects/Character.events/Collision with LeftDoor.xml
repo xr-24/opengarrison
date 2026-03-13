@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<event category="COLLISION" with="LeftDoor">
+  <actions>
+    <action id="603" library="1">
+      <!--action name: Code-->
+      <kind>CODE</kind>
+      <allowRelative>false</allowRelative>
+      <question>false</question>
+      <canApplyTo>true</canApplyTo>
+      <actionType>CODE</actionType>
+      <functionName/>
+      <relative>false</relative>
+      <not>false</not>
+      <appliesTo>.self</appliesTo>
+      <arguments>
+        <argument kind="STRING">//only allow passage from the left hand side, otherwise get blocked
+if(hspeed &lt; 0)
+{
+    var door_bbox_right;
+    door_bbox_right = other.bbox_right;
+    if(x+left_bound_offset-hspeed &gt;= door_bbox_right-2)
+    {
+        x = door_bbox_right - left_bound_offset;
+        hspeed = 0;
+    }
+}
+</argument>
+      </arguments>
+    </action>
+  </actions>
+</event>

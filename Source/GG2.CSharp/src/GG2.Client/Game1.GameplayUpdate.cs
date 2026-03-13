@@ -1,0 +1,212 @@
+#nullable enable
+
+using GG2.Core;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
+using System;
+
+namespace GG2.Client;
+
+public partial class Game1
+{
+    private void UpdateGameplayScreenState(KeyboardState keyboard)
+    {
+        var escapePressed = keyboard.IsKeyDown(Keys.Escape) && !_previousKeyboard.IsKeyDown(Keys.Escape);
+        var changeTeamPressed = IsKeyPressed(keyboard, _inputBindings.ChangeTeam);
+        var changeClassPressed = IsKeyPressed(keyboard, _inputBindings.ChangeClass);
+        var openChatPressed = !IsGameplayMenuOpen() && (IsKeyPressed(keyboard, Keys.Enter) || IsKeyPressed(keyboard, Keys.T));
+        var pausePressed = GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || escapePressed;
+
+        if (!_passwordPromptOpen && !_consoleOpen && !_teamSelectOpen && !_classSelectOpen && !_chatOpen && openChatPressed)
+        {
+            _chatOpen = true;
+            _chatInput = string.Empty;
+            return;
+        }
+
+        if (_chatOpen && escapePressed)
+        {
+            _chatOpen = false;
+            _chatInput = string.Empty;
+            return;
+        }
+
+        if (!_passwordPromptOpen && !_optionsMenuOpen && !_controlsMenuOpen && !_inGameMenuOpen)
+        {
+            var canToggleSelectionMenu = !_consoleOpen
+                && !_chatOpen
+                && !_world.MatchState.IsEnded
+                && (!_killCamEnabled || _world.LocalDeathCam is null);
+            if (canToggleSelectionMenu && changeTeamPressed)
+            {
+                _teamSelectOpen = !_teamSelectOpen;
+                if (_teamSelectOpen)
+                {
+                    _classSelectOpen = false;
+                }
+            }
+            else if (canToggleSelectionMenu && !_world.LocalPlayerAwaitingJoin && changeClassPressed)
+            {
+                _classSelectOpen = !_classSelectOpen;
+                if (_classSelectOpen)
+                {
+                    _teamSelectOpen = false;
+                }
+            }
+        }
+
+        if (_consoleOpen && escapePressed)
+        {
+            _consoleOpen = false;
+        }
+        else if (_chatOpen && escapePressed)
+        {
+            _chatOpen = false;
+            _chatInput = string.Empty;
+        }
+        else if (_teamSelectOpen && escapePressed && !_world.LocalPlayerAwaitingJoin)
+        {
+            _teamSelectOpen = false;
+        }
+        else if (_classSelectOpen && escapePressed)
+        {
+            _classSelectOpen = false;
+        }
+        else if (!_consoleOpen && !_teamSelectOpen && !_classSelectOpen && !_optionsMenuOpen && !_controlsMenuOpen && !_inGameMenuOpen && pausePressed)
+        {
+            OpenInGameMenu();
+        }
+
+        if (_world.MatchState.IsEnded || (_killCamEnabled && _world.LocalDeathCam is not null))
+        {
+            _teamSelectOpen = false;
+            _classSelectOpen = false;
+        }
+
+        if (_passwordPromptOpen)
+        {
+            _teamSelectOpen = false;
+            _classSelectOpen = false;
+        }
+    }
+
+    private (PlayerInputSnapshot GameplayInput, PlayerInputSnapshot NetworkInput) BuildGameplayInputs(KeyboardState keyboard, MouseState mouse, Vector2 cameraPosition)
+    {
+        var gameplayInput = IsGameplayInputBlocked() || _networkClient.IsConnected
+            ? default
+            : KeyboardInputMapper.BuildGameplaySnapshot(_inputBindings, keyboard, mouse, cameraPosition.X, cameraPosition.Y);
+        var networkInput = IsGameplayInputBlocked()
+            ? default
+            : KeyboardInputMapper.BuildGameplaySnapshot(_inputBindings, keyboard, mouse, cameraPosition.X, cameraPosition.Y);
+
+        UpdateBuildMenuState(keyboard, mouse);
+        if (_pendingBuildSentry || _pendingDestroySentry)
+        {
+            gameplayInput = gameplayInput with
+            {
+                BuildSentry = _pendingBuildSentry,
+                DestroySentry = _pendingDestroySentry,
+            };
+            networkInput = networkInput with
+            {
+                BuildSentry = _pendingBuildSentry,
+                DestroySentry = _pendingDestroySentry,
+            };
+            _pendingBuildSentry = false;
+            _pendingDestroySentry = false;
+        }
+
+        return (gameplayInput, networkInput);
+    }
+
+    private void AdvanceGameplaySimulation(GameTime gameTime, PlayerInputSnapshot networkInput)
+    {
+        if (_networkClient.IsConnected)
+        {
+            var jumpPressed = networkInput.Up
+                && !_previousKeyboard.IsKeyDown(_inputBindings.MoveUp)
+                && !_previousKeyboard.IsKeyDown(Keys.Up);
+            var sentInputSequence = _networkClient.SendInput(networkInput);
+            RecordPredictedInput(sentInputSequence, networkInput, jumpPressed);
+            ProcessNetworkMessages();
+        }
+        else
+        {
+            _simulator.Step(gameTime.ElapsedGameTime.TotalSeconds);
+        }
+    }
+
+    private void UpdateGameplayPresentation(GameTime gameTime, MouseState mouse)
+    {
+        UpdateInterpolatedWorldState();
+        AdvanceChatHud();
+        UpdateLocalSentryNotice();
+        UpdateIntelNotice();
+        UpdateNoticeState();
+        UpdateLocalPredictedRenderPosition((float)gameTime.ElapsedGameTime.TotalSeconds);
+        foreach (var player in EnumerateRenderablePlayers())
+        {
+            UpdatePlayerRenderState(player);
+        }
+
+        RemoveStalePlayerRenderState();
+        AdvanceExplosionVisuals();
+        AdvanceBloodVisuals();
+        AdvanceRocketSmokeVisuals();
+        AdvanceFlameSmokeVisuals();
+        PlayPendingVisualEvents();
+        PlayPendingSoundEvents();
+        PlayDeathCamSoundIfNeeded();
+        PlayRoundEndSoundIfNeeded();
+        EnsureIngameMusicPlaying();
+        UpdateTeamSelect(mouse);
+        UpdateClassSelect(mouse);
+    }
+
+    private void UpdateGameplayWindowState()
+    {
+        IsMouseVisible = _passwordPromptOpen
+            || _teamSelectOpen
+            || _teamSelectAlpha > 0.02f
+            || _classSelectOpen
+            || _classSelectAlpha > 0.02f
+            || _inGameMenuOpen
+            || _optionsMenuOpen
+            || _controlsMenuOpen;
+
+        var sourceTag = _world.Level.ImportedFromSource ? "src" : "fallback";
+        var lifeTag = _world.LocalPlayerAwaitingJoin ? "joining" : _world.LocalPlayer.IsAlive ? "alive" : $"respawn:{_world.LocalPlayerRespawnTicks}";
+        var remoteLifeTag = _networkClient.IsConnected
+            ? $"remotes:{_world.RemoteSnapshotPlayers.Count}"
+            : _world.EnemyPlayerEnabled
+                ? "offline:npc:on"
+                : "offline:npc:off";
+        var carryingIntelTag = _world.LocalPlayer.IsCarryingIntel ? "yes" : "no";
+        var heavyTag = GetPlayerIsHeavyEating(_world.LocalPlayer)
+            ? $" eat:{GetPlayerHeavyEatTicksRemaining(_world.LocalPlayer)}"
+            : string.Empty;
+        var sniperTag = GetPlayerIsSniperScoped(_world.LocalPlayer)
+            ? $" scope:{GetPlayerSniperRifleDamage(_world.LocalPlayer)}"
+            : string.Empty;
+        var consoleTag = _consoleOpen ? " console:open" : string.Empty;
+        var netTag = _networkClient.IsConnected ? $" net:{_networkClient.ServerDescription}" : string.Empty;
+        Window.Title = $"GG2.Client - {_world.LocalPlayer.DisplayName} ({_world.LocalPlayer.ClassName}) - {_world.Level.Name} [{sourceTag}] - {lifeTag} - HP {_world.LocalPlayer.Health}/{_world.LocalPlayer.MaxHealth} - Ammo {_world.LocalPlayer.CurrentShells}/{_world.LocalPlayer.MaxShells} - {remoteLifeTag} - Caps {_world.RedCaps}:{_world.BlueCaps} - Carrying {carryingIntelTag} - BlueIntel {(GetIntelStateLabel(_world.BlueIntel))} - Frame {_world.Frame} - Pos ({_world.LocalPlayer.X:F1}, {_world.LocalPlayer.Y:F1}) - AirJumps {_world.LocalPlayer.RemainingAirJumps}{heavyTag}{sniperTag}{consoleTag}{netTag}";
+    }
+
+    private void FinalizeGameplayFrame(KeyboardState keyboard, MouseState mouse)
+    {
+        _previousKeyboard = keyboard;
+        _previousMouse = mouse;
+        _wasLocalPlayerAlive = _world.LocalPlayer.IsAlive;
+        _wasDeathCamActive = !_world.LocalPlayer.IsAlive && _world.LocalDeathCam is not null;
+        _wasMatchEnded = _world.MatchState.IsEnded;
+        if (_autoBalanceNoticeTicks > 0)
+        {
+            _autoBalanceNoticeTicks = Math.Max(0, _autoBalanceNoticeTicks - 1);
+            if (_autoBalanceNoticeTicks == 0)
+            {
+                _autoBalanceNoticeText = string.Empty;
+            }
+        }
+    }
+}

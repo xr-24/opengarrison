@@ -1,0 +1,7 @@
+namespace GG2.Core;
+
+public sealed record MatchRules(
+    GameModeKind Mode,
+    int TimeLimitMinutes,
+    int TimeLimitTicks,
+    int CapLimit);

@@ -1,0 +1,243 @@
+#nullable enable
+
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using System;
+using System.IO;
+using GG2.Core;
+
+namespace GG2.Client;
+
+public partial class Game1
+{
+    private void UpdateMainMenu(MouseState mouse)
+    {
+        const float xbegin = 40f;
+        const float ybegin = 300f;
+        const float spacing = 30f;
+        const float width = 200f;
+        const int items = 6;
+
+        if (mouse.X > xbegin && mouse.X < xbegin + width)
+        {
+            _mainMenuHoverIndex = (int)MathF.Round((mouse.Y - ybegin) / spacing);
+            if (_mainMenuHoverIndex < 0 || _mainMenuHoverIndex >= items)
+            {
+                _mainMenuHoverIndex = -1;
+            }
+        }
+        else
+        {
+            _mainMenuHoverIndex = -1;
+        }
+
+        var clickPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton != ButtonState.Pressed;
+        if (!clickPressed || _mainMenuHoverIndex < 0)
+        {
+            return;
+        }
+
+        switch (_mainMenuHoverIndex)
+        {
+            case 0:
+                OpenHostSetupMenu();
+                break;
+            case 1:
+                OpenLobbyBrowser();
+                break;
+            case 2:
+                _manualConnectOpen = true;
+                _editingConnectHost = true;
+                _editingConnectPort = false;
+                _optionsMenuOpen = false;
+                _controlsMenuOpen = false;
+                CloseLobbyBrowser(clearStatus: false);
+                _creditsOpen = false;
+                _editingPlayerName = false;
+                _menuStatusMessage = string.Empty;
+                break;
+            case 3:
+                _manualConnectOpen = false;
+                CloseLobbyBrowser(clearStatus: false);
+                _creditsOpen = false;
+                OpenOptionsMenu(fromGameplay: false);
+                break;
+            case 4:
+                _creditsOpen = true;
+                _manualConnectOpen = false;
+                CloseLobbyBrowser(clearStatus: false);
+                _optionsMenuOpen = false;
+                _controlsMenuOpen = false;
+                _editingPlayerName = false;
+                _menuStatusMessage = string.Empty;
+                break;
+            case 5:
+                Exit();
+                break;
+        }
+    }
+
+    private void DrawMainMenu()
+    {
+        var viewportWidth = _graphics.PreferredBackBufferWidth;
+        var viewportHeight = _graphics.PreferredBackBufferHeight;
+
+        if (_menuBackgroundTexture is null)
+        {
+            var path = ProjectSourceLocator.FindFile(Path.Combine("Source", "GG2.CSharp", "src", "GG2.Backgrounds", "ogg2.jpg"));
+            if (path is not null && File.Exists(path))
+            {
+                using var stream = File.OpenRead(path);
+                _menuBackgroundTexture = Texture2D.FromStream(GraphicsDevice, stream);
+            }
+        }
+
+        if (_menuBackgroundTexture is not null)
+        {
+            _spriteBatch.Draw(_menuBackgroundTexture, new Rectangle(0, 0, viewportWidth, viewportHeight), Color.White);
+        }
+        else if (!TryDrawScreenSprite("MenuBackgroundS", _menuImageFrame, new Vector2(viewportWidth / 2f, viewportHeight / 2f), Color.White, Vector2.One))
+        {
+            _spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewportWidth, viewportHeight), new Color(26, 24, 20));
+        }
+
+        if (_optionsMenuOpen)
+        {
+            DrawOptionsMenu();
+            return;
+        }
+
+        if (_controlsMenuOpen)
+        {
+            DrawControlsMenu();
+            return;
+        }
+
+        if (_hostSetupOpen)
+        {
+            DrawHostSetupMenu();
+            return;
+        }
+
+        if (_creditsOpen)
+        {
+            DrawCreditsMenu();
+            return;
+        }
+
+        if (_lobbyBrowserOpen)
+        {
+            DrawLobbyBrowserMenu();
+            return;
+        }
+
+        if (_manualConnectOpen)
+        {
+            DrawManualConnectMenu();
+            return;
+        }
+
+        string[] items = ["Host Game", "Join (lobby)", "Join (manual)", "Options", "Credits", "Quit"];
+        var position = new Vector2(40f, 300f);
+        for (var index = 0; index < items.Length; index += 1)
+        {
+            var color = index == _mainMenuHoverIndex ? Color.Red : Color.White;
+            DrawBitmapFontText(items[index], position, color, 1f);
+            position.Y += 30f;
+        }
+
+        DrawMenuStatusText();
+    }
+
+    private void UpdateCreditsMenu(KeyboardState keyboard, MouseState mouse)
+    {
+        if (keyboard.IsKeyDown(Keys.Escape) && !_previousKeyboard.IsKeyDown(Keys.Escape))
+        {
+            _creditsOpen = false;
+            return;
+        }
+
+        var panel = GetCreditsPanelBounds();
+        var backBounds = new Rectangle(panel.X + 30, panel.Bottom - 62, 180, 42);
+        var clickPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton != ButtonState.Pressed;
+        if (clickPressed && backBounds.Contains(mouse.Position))
+        {
+            _creditsOpen = false;
+        }
+    }
+
+    private void DrawCreditsMenu()
+    {
+        var viewportWidth = _graphics.PreferredBackBufferWidth;
+        var viewportHeight = _graphics.PreferredBackBufferHeight;
+        _spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewportWidth, viewportHeight), Color.Black * 0.82f);
+
+        var panel = GetCreditsPanelBounds();
+        _spriteBatch.Draw(_pixel, panel, new Color(31, 33, 38, 238));
+        _spriteBatch.Draw(_pixel, new Rectangle(panel.X, panel.Y, panel.Width, 3), new Color(210, 210, 210));
+        _spriteBatch.Draw(_pixel, new Rectangle(panel.X, panel.Bottom - 3, panel.Width, 3), new Color(76, 76, 76));
+
+        DrawBitmapFontText("Credits", new Vector2(panel.X + 30f, panel.Y + 26f), Color.White, 1.35f);
+
+        string[] lines =
+        [
+            "Gang Garrison 2",
+            "Original game by the GG2 team and Faucet Software.",
+            string.Empty,
+            "C# port",
+            "Current porting work, networking, and client/runtime",
+            "reconstruction live in this repository.",
+            string.Empty,
+            "Technology",
+            "MonoGame runtime, shared simulation core, and",
+            "source-backed GameMaker asset import pipeline.",
+            string.Empty,
+            "Status",
+            "This port is still in active development, but the",
+            "client, server, and core gameplay loop are playable.",
+            string.Empty,
+            "Press Escape or click Back to return."
+        ];
+
+        var drawY = panel.Y + 82f;
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrEmpty(line))
+            {
+                drawY += 16f;
+                continue;
+            }
+
+            var scale = line.EndsWith(':') || line is "Gang Garrison 2" or "C# port" or "Technology" or "Status"
+                ? 1.05f
+                : 0.92f;
+            var color = line is "Gang Garrison 2" or "C# port" or "Technology" or "Status"
+                ? new Color(240, 228, 196)
+                : Color.White;
+            DrawBitmapFontText(line, new Vector2(panel.X + 30f, drawY), color, scale);
+            drawY += scale >= 1f ? 24f : 20f;
+        }
+
+        DrawMenuButton(new Rectangle(panel.X + 30, panel.Bottom - 62, 180, 42), "Back", false);
+    }
+
+    private void DrawMenuStatusText()
+    {
+        if (string.IsNullOrWhiteSpace(_menuStatusMessage))
+        {
+            return;
+        }
+
+        DrawBitmapFontText(_menuStatusMessage, new Vector2(40f, 520f), new Color(235, 225, 180), 1f);
+    }
+
+    private Rectangle GetCreditsPanelBounds()
+    {
+        var viewportWidth = _graphics.PreferredBackBufferWidth;
+        var viewportHeight = _graphics.PreferredBackBufferHeight;
+        var width = Math.Min(680, viewportWidth - 120);
+        var height = Math.Min(470, viewportHeight - 120);
+        return new Rectangle((viewportWidth - width) / 2, (viewportHeight - height) / 2, width, height);
+    }
+}

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<event category="COLLISION" with="HealingCabinet">
+  <actions>
+    <action id="603" library="1">
+      <!--action name: Code-->
+      <kind>CODE</kind>
+      <allowRelative>false</allowRelative>
+      <question>false</question>
+      <canApplyTo>true</canApplyTo>
+      <actionType>CODE</actionType>
+      <functionName/>
+      <relative>false</relative>
+      <not>false</not>
+      <appliesTo>.self</appliesTo>
+      <arguments>
+        <argument kind="STRING">if (!global.mapchanging) {
+    if ((hp &lt; maxHp or nutsNBolts &lt; 100 or !canEat) and other.heal)
+    {
+        if(instance_exists(TeamDeathmatchHUD))
+            hp += global.delta_factor/30*10; // 10 hp per second
+        else
+        {
+            playsound(x,y,CbntHealSnd);
+            hp = maxHp;
+            nutsNBolts = maxNutsNBolts;
+            alarm[6] = 0;
+            canEat = true; // FIXME: redundant with resetting alarm 6?
+        }
+    }
+    if (burnIntensity &gt; 0 or burnDuration &gt; 0)
+    {
+        burnIntensity = 0;
+        burnDuration = 0;
+        burnedBy = -1;
+        afterburnSource = -1;
+    }
+    //ammo stuffs
+    if (other.refill) {
+        if(currentWeapon.ammoCount &lt; currentWeapon.maxAmmo) {
+            switch(currentWeapon.object_index) {
+            case Medigun:
+            case Minigun:
+            case Flamethrower:
+            case Blade:
+                if (currentWeapon.ammoCount / currentWeapon.maxAmmo &lt; 5/6)
+                    playsound(x,y,PickupSnd);
+                break;
+            default:
+                playsound(x,y,PickupSnd);
+                break;
+            }
+            currentWeapon.ammoCount = currentWeapon.maxAmmo;
+            switch(currentWeapon.object_index) {
+            case Rocketlauncher:
+            case Scattergun:
+            case Shotgun:
+            case Revolver:
+            case Medigun:
+                with(currentWeapon)
+                {
+                    if (alarm[5] &gt; 0)
+                    {
+                        // Stop the animation
+                        event_perform(ev_alarm, 5);
+                    }
+                    alarm[5] = -1;
+                }
+                break;
+            }
+        }
+    }
+    if (other.uber and currentWeapon.object_index == Medigun) {
+        if (global.isHost and !currentWeapon.uberReady and !currentWeapon.ubering) {
+            sendEventUberReady(player);
+            doEventUberReady(player);
+        }
+    }
+}
+</argument>
+      </arguments>
+    </action>
+  </actions>
+</event>

@@ -1,0 +1,75 @@
+#nullable enable
+
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using GG2.Core;
+
+namespace GG2.Client;
+
+public partial class Game1
+{
+    private void DrawChatBubble(PlayerEntity player, Vector2 cameraPosition)
+    {
+        if (!player.IsChatBubbleVisible)
+        {
+            return;
+        }
+
+        var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
+        var sprite = _runtimeAssets.GetSprite("BubblesS");
+        if (sprite is null || sprite.Frames.Count == 0)
+        {
+            return;
+        }
+
+        var frameIndex = Math.Clamp(player.ChatBubbleFrameIndex, 0, sprite.Frames.Count - 1);
+        var alpha = Math.Clamp(player.ChatBubbleAlpha, 0f, 1f);
+        if (player.ClassId == PlayerClass.Spy && GetPlayerIsSpyCloaked(player) && !GetPlayerIsSpyVisibleToEnemies(player))
+        {
+            alpha *= 0f;
+        }
+
+        if (alpha <= 0f)
+        {
+            return;
+        }
+
+        _spriteBatch.Draw(
+            sprite.Frames[frameIndex],
+            new Vector2(MathF.Round(renderPosition.X) + 10f - cameraPosition.X, MathF.Round(renderPosition.Y) - 18f - cameraPosition.Y),
+            null,
+            Color.White * alpha,
+            0f,
+            sprite.Origin.ToVector2(),
+            Vector2.One,
+            SpriteEffects.None,
+            0f);
+    }
+
+    private void DrawHealthBar(PlayerEntity player, Vector2 cameraPosition, Color fillColor, Color backColor)
+    {
+        var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
+        var barWidth = (int)player.Width;
+        var backRectangle = new Rectangle(
+            (int)(renderPosition.X - (player.Width / 2f) - cameraPosition.X),
+            (int)(renderPosition.Y - player.Height / 2f - 8f - cameraPosition.Y),
+            barWidth,
+            4);
+        _spriteBatch.Draw(_pixel, backRectangle, backColor);
+
+        if (player.MaxHealth <= 0)
+        {
+            return;
+        }
+
+        var fillWidth = (int)MathF.Round(barWidth * (player.Health / (float)player.MaxHealth));
+        if (fillWidth <= 0)
+        {
+            return;
+        }
+
+        var fillRectangle = new Rectangle(backRectangle.X, backRectangle.Y, fillWidth, backRectangle.Height);
+        _spriteBatch.Draw(_pixel, fillRectangle, fillColor);
+    }
+}
