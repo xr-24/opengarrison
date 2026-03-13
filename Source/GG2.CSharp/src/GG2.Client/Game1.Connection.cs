@@ -510,12 +510,6 @@ public partial class Game1
             }
 
             UpdateHostedServerConsoleStatusUnsafe(source, message);
-
-            if (!string.IsNullOrWhiteSpace(_hostedServerLogPath))
-            {
-                File.AppendAllText(_hostedServerLogPath, line);
-                _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
-            }
         }
     }
 
@@ -525,10 +519,9 @@ public partial class Game1
         lock (_hostedServerLogSync)
         {
             _hostedServerLogPath = logPath;
-            if (reset || !File.Exists(logPath))
+            if (reset)
             {
                 ResetHostedServerConsoleStateUnsafe();
-                File.WriteAllText(logPath, string.Empty);
             }
 
             _hostedServerLogReadPosition = File.Exists(logPath) ? new FileInfo(logPath).Length : 0L;
@@ -916,7 +909,9 @@ public partial class Game1
         {
             _hostedServerConsoleLines.Clear();
             _hostedServerLastOutputLine = null;
-            var text = File.ReadAllText(_hostedServerLogPath);
+            using var stream = new FileStream(_hostedServerLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            var text = reader.ReadToEnd();
             ProcessHostedServerLogChunkUnsafe(text);
             _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
         }

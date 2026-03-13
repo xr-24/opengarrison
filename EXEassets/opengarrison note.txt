@@ -1,0 +1,6 @@
+Hi, these are mostly unused assets and scripts from the modern GML version of GG2 
+They are here for future referencing/porting newer content to the new framework in the future
+although some are already dependencies,
+most dependencies are currently in the 2.2 gg2 folder in Source/gg2
+(for ease of porting opengarrison was based on gg2 version 2.2 which is over 15 years old,
+so a lot of changes added over the years are currently missing)

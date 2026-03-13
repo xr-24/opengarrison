@@ -183,7 +183,8 @@ public partial class Game1
         var bladeColor = blade.Team == PlayerTeam.Blue
             ? new Color(180, 220, 255)
             : new Color(255, 235, 170);
-        if (!TryDrawSprite("BladeProjectileS", blade.Team == PlayerTeam.Blue ? 1 : 0, renderPosition.X, renderPosition.Y, cameraPosition, bladeColor, GetVelocityRotation(blade.VelocityX, blade.VelocityY)))
+        var bladeFrameIndex = Math.Max(0, PlayerEntity.QuoteBladeLifetimeTicks - blade.TicksRemaining) % 4;
+        if (!TryDrawSprite("BladeProjectileS", bladeFrameIndex, renderPosition.X, renderPosition.Y, cameraPosition, bladeColor, GetVelocityRotation(blade.VelocityX, blade.VelocityY)))
         {
             var bladeRectangle = new Rectangle(
                 (int)(renderPosition.X - 6f - cameraPosition.X),

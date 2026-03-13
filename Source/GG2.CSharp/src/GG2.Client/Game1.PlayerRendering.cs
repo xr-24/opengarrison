@@ -326,7 +326,8 @@ public partial class Game1
             (PlayerClass.Medic, PlayerTeam.Blue) => "MedicBlueS",
             (PlayerClass.Spy, PlayerTeam.Red) => "SpyRedS",
             (PlayerClass.Spy, PlayerTeam.Blue) => "SpyBlueS",
-            (PlayerClass.Quote, _) => "QuoteRedS",
+            (PlayerClass.Quote, PlayerTeam.Red) => "QuoteRedS",
+            (PlayerClass.Quote, PlayerTeam.Blue) => "CurlyBlueS",
             _ => null,
         };
     }

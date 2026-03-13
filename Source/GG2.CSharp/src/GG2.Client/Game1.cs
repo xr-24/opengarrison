@@ -109,6 +109,7 @@ public partial class Game1 : Game
     private bool _scoreboardOpen;
     private float _scoreboardAlpha = 0.02f;
     private bool _chatOpen;
+    private bool _chatSubmitAwaitingOpenKeyRelease;
     private string _chatInput = string.Empty;
     private BubbleMenuKind _bubbleMenuKind;
     private float _bubbleMenuAlpha = 0.01f;

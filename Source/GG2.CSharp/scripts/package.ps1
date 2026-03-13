@@ -71,6 +71,31 @@ exec "`$SCRIPT_DIR/$ExecutableName" "`$@"
     Set-Content -Path $Path -Value $scriptContents -NoNewline
 }
 
+function Copy-MinimalExeAssets {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WorkspaceRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$StagingRoot
+    )
+
+    $requiredEntries = @(
+        @{ Source = "EXEassets\Sprites\gg2FontS.xml"; Target = "Assets\EXEassets\Sprites\gg2FontS.xml" },
+        @{ Source = "EXEassets\Sprites\gg2FontS.images"; Target = "Assets\EXEassets\Sprites\gg2FontS.images" }
+    )
+
+    foreach ($entry in $requiredEntries) {
+        $sourcePath = Join-Path $WorkspaceRoot $entry.Source
+        $targetPath = Join-Path $StagingRoot $entry.Target
+        if (-not (Test-Path $sourcePath)) {
+            throw "Required EXEassets packaging source is missing: $sourcePath"
+        }
+
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+        Copy-Item $sourcePath $targetPath -Recurse -Force
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 
 $packageArtifacts = @()
@@ -113,7 +138,6 @@ try {
         $assetCopies = @(
             @{ Source = "Source\gg2"; Target = "Assets\Source\gg2" },
             @{ Source = "Source\GG2.CSharp\src\GG2.Backgrounds"; Target = "Assets\Source\GG2.CSharp\src\GG2.Backgrounds" },
-            @{ Source = "EXEassets"; Target = "Assets\EXEassets" },
             @{ Source = "Music"; Target = "Assets\Music" }
         )
 
@@ -128,6 +152,8 @@ try {
             New-Item -ItemType Directory -Force -Path $targetParent | Out-Null
             Copy-Item $sourcePath $targetPath -Recurse -Force
         }
+
+        Copy-MinimalExeAssets -WorkspaceRoot $workspaceRoot -StagingRoot $stagingRoot
 
         Copy-Item (Join-Path $repoRoot "packaging\config\client.settings.json") (Join-Path $stagingRoot "config\client.settings.json") -Force
         Copy-Item (Join-Path $repoRoot "packaging\config\input.bindings.json") (Join-Path $stagingRoot "config\input.bindings.json") -Force

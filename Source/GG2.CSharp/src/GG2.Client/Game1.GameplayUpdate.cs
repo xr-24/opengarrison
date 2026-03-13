@@ -14,7 +14,16 @@ public partial class Game1
         var escapePressed = keyboard.IsKeyDown(Keys.Escape) && !_previousKeyboard.IsKeyDown(Keys.Escape);
         var changeTeamPressed = IsKeyPressed(keyboard, _inputBindings.ChangeTeam);
         var changeClassPressed = IsKeyPressed(keyboard, _inputBindings.ChangeClass);
-        var openChatPressed = !IsGameplayMenuOpen() && (IsKeyPressed(keyboard, Keys.Enter) || IsKeyPressed(keyboard, Keys.T));
+        if (_chatSubmitAwaitingOpenKeyRelease
+            && !keyboard.IsKeyDown(Keys.Enter)
+            && !keyboard.IsKeyDown(Keys.T))
+        {
+            _chatSubmitAwaitingOpenKeyRelease = false;
+        }
+
+        var openChatPressed = !_chatSubmitAwaitingOpenKeyRelease
+            && !IsGameplayMenuOpen()
+            && (IsKeyPressed(keyboard, Keys.Enter) || IsKeyPressed(keyboard, Keys.T));
         var pausePressed = GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || escapePressed;
 
         if (!_passwordPromptOpen && !_consoleOpen && !_teamSelectOpen && !_classSelectOpen && !_chatOpen && openChatPressed)
