@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GG2.Core;
+using GG2.Server;
 
 const string protocolUuidString = "71eb5496-492b-b186-4770-06ccb30d3f8f";
 const int lobbyHeartbeatSeconds = 30;
@@ -15,6 +17,9 @@ const int autoBalanceNewPlayerGraceSeconds = 60;
 
 var launchOptions = ServerLaunchOptions.Load(args);
 launchOptions.Settings.Save(launchOptions.ResolvedConfigPath);
+var sessionPath = HostedServerSessionInfo.GetDefaultPath();
+var logPath = RuntimePaths.GetConfigPath(HostedServerSessionInfo.DefaultLogFileName);
+var pipeName = $"opengarrison-hosted-server-{Environment.ProcessId}";
 
 var config = new SimulationConfig
 {
@@ -51,6 +56,22 @@ var server = new GameServer(
     transientEventReplayTicks);
 
 using var shutdownCts = new CancellationTokenSource();
+using var consoleLogWriter = new HostedServerConsoleLogWriter(Console.Out, logPath, reset: true);
+Console.SetOut(consoleLogWriter);
+Console.SetError(consoleLogWriter);
+var sessionInfo = new HostedServerSessionInfo
+{
+    ProcessId = Environment.ProcessId,
+    Port = launchOptions.Port,
+    ServerName = launchOptions.ServerName,
+    PipeName = pipeName,
+    LogPath = logPath,
+    ConfigPath = launchOptions.ResolvedConfigPath,
+    WorkingDirectory = Directory.GetCurrentDirectory(),
+    LaunchMode = Environment.GetEnvironmentVariable("OPENGARRISON_LAUNCH_MODE") ?? "direct",
+    StartedAtUtc = DateTimeOffset.UtcNow,
+};
+sessionInfo.Save(sessionPath);
 ConsoleCancelEventHandler cancelHandler = (_, e) =>
 {
     e.Cancel = true;
@@ -61,7 +82,19 @@ ConsoleCancelEventHandler cancelHandler = (_, e) =>
     }
 };
 Console.CancelKeyPress += cancelHandler;
-var shutdownCommandTask = Task.Run(() => ListenForShutdownCommands(shutdownCts));
+var shutdownCommandTask = Task.Run(() => ListenForShutdownCommands(server, shutdownCts));
+using var adminPipeHost = new HostedServerAdminPipeHost(
+    pipeName,
+    server.ExecuteAdminCommandAsync,
+    () =>
+    {
+        if (!shutdownCts.IsCancellationRequested)
+        {
+            Console.WriteLine("[server] shutdown requested.");
+            shutdownCts.Cancel();
+        }
+    },
+    shutdownCts.Token);
 
 try
 {
@@ -70,6 +103,7 @@ try
 finally
 {
     shutdownCts.Cancel();
+    HostedServerSessionInfo.Delete(sessionPath);
     Console.CancelKeyPress -= cancelHandler;
     try
     {
@@ -82,40 +116,22 @@ finally
 
 return;
 
-static void ListenForShutdownCommands(CancellationTokenSource shutdownCts)
+static void ListenForShutdownCommands(GameServer server, CancellationTokenSource shutdownCts)
 {
     try
     {
         while (!shutdownCts.IsCancellationRequested)
         {
             var line = Console.ReadLine();
-            if (line is null)
+            if (!ServerConsoleCommandProcessor.TryProcessLine(
+                    line,
+                    Console.IsInputRedirected,
+                    shutdownCts,
+                    Console.WriteLine,
+                    server.EnqueueConsoleCommand))
             {
-                if (Console.IsInputRedirected && !shutdownCts.IsCancellationRequested)
-                {
-                    Console.WriteLine("[server] stdin closed; shutting down.");
-                    shutdownCts.Cancel();
-                }
-
                 break;
             }
-
-            var command = line.Trim();
-            if (command.Length == 0)
-            {
-                continue;
-            }
-
-            if (string.Equals(command, "shutdown", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(command, "exit", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(command, "quit", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("[server] shutdown requested.");
-                shutdownCts.Cancel();
-                break;
-            }
-
-            Console.WriteLine($"[server] unknown command \"{command}\". Type shutdown to stop.");
         }
     }
     catch (InvalidOperationException)

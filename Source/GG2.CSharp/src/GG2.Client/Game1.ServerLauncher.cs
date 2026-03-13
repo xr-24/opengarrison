@@ -1,5 +1,7 @@
 #nullable enable
 
+using GG2.Core;
+
 namespace GG2.Client;
 
 public partial class Game1
@@ -10,6 +12,13 @@ public partial class Game1
     {
         get
         {
+            if (_hostedServerSession is not null
+                && TryGetHostedServerProcess(_hostedServerSession.ProcessId, out var attachedProcess))
+            {
+                attachedProcess?.Dispose();
+                return true;
+            }
+
             if (_hostedServerProcess is null)
             {
                 return false;
@@ -28,6 +37,8 @@ public partial class Game1
 
     private void InitializeServerLauncherMode()
     {
+        InitializeHostedServerLog(reset: false);
+        AppendHostedServerLog("launcher", "GG2.ServerLauncher initialized.");
         _startupSplashOpen = false;
         _mainMenuOpen = true;
         _manualConnectOpen = false;
@@ -36,32 +47,83 @@ public partial class Game1
         _controlsMenuOpen = false;
         _hostSetupOpen = false;
         _hostSetupEditField = HostSetupEditField.None;
+        _hostSetupTab = HostSetupTab.Settings;
         OpenHostSetupMenu();
-        _menuStatusMessage = "Configure and start a dedicated server.";
+        if (TryResumeHostedServerSession(loadExistingLog: true))
+        {
+            _hostSetupTab = HostSetupTab.ServerConsole;
+            _hostSetupEditField = HostSetupEditField.ServerConsoleCommand;
+            _menuStatusMessage = $"Resumed dedicated server on UDP port {_hostedServerStatusPort}.";
+        }
+        else
+        {
+            _menuStatusMessage = "Configure and start a dedicated server.";
+        }
     }
 
     private void UpdateServerLauncherState()
     {
-        if (!IsServerLauncherMode || _hostedServerProcess is null)
+        if (!IsServerLauncherMode)
+        {
+            return;
+        }
+
+        if (_hostedServerSession is null)
+        {
+            TryResumeHostedServerSession(loadExistingLog: true, expectedProcessId: _hostedServerProcess?.Id);
+        }
+
+        if (_hostedServerSession is not null)
+        {
+            if (!TryGetHostedServerProcess(_hostedServerSession.ProcessId, out var attachedProcess))
+            {
+                _hostedServerSession = null;
+                HostedServerSessionInfo.Delete();
+                _menuStatusMessage = BuildHostedServerExitMessage();
+            }
+            else
+            {
+                attachedProcess?.Dispose();
+                PollHostedServerLog();
+                if (_hostedServerStatePollTicks <= 0)
+                {
+                    TrySendHostedServerAdminCommand("__snapshot", out var snapshotLines, out _);
+                    lock (_hostedServerLogSync)
+                    {
+                        foreach (var line in snapshotLines)
+                        {
+                            UpdateHostedServerConsoleStatusUnsafe("server", line);
+                        }
+                    }
+
+                    _hostedServerStatePollTicks = 90;
+                }
+                else
+                {
+                    _hostedServerStatePollTicks -= 1;
+                }
+            }
+
+            return;
+        }
+
+        if (_hostedServerProcess is null)
         {
             return;
         }
 
         try
         {
-            if (!_hostedServerProcess.HasExited)
+            if (_hostedServerProcess.HasExited)
             {
-                return;
+                _hostedServerProcess.Dispose();
+                _hostedServerProcess = null;
+                _menuStatusMessage = BuildHostedServerExitMessage();
             }
         }
         catch
         {
-            return;
         }
-
-        _hostedServerProcess.Dispose();
-        _hostedServerProcess = null;
-        _menuStatusMessage = "Dedicated server exited.";
     }
 
     private string GetHostSetupTitle()
@@ -88,7 +150,7 @@ public partial class Game1
             return "Host";
         }
 
-        return IsHostedServerRunning ? "Restart Server" : "Start Server";
+        return IsHostedServerRunning ? "Server Running" : "Start Server";
     }
 
     private string GetHostSetupSecondaryButtonLabel()
@@ -111,11 +173,13 @@ public partial class Game1
         _hostSetupEditField = HostSetupEditField.None;
         if (IsHostedServerRunning)
         {
+            AppendHostedServerLog("launcher", "Back action requested while dedicated server was running.");
             StopHostedServer();
             _menuStatusMessage = "Dedicated server stopped.";
         }
         else
         {
+            AppendHostedServerLog("launcher", "Back action requested with no running server; exiting launcher.");
             Exit();
         }
 
@@ -138,6 +202,17 @@ public partial class Game1
         _optionsMenuOpen = false;
         _creditsOpen = false;
         _controlsMenuOpen = false;
+        InitializeHostedServerLog(reset: true);
+        PrimeHostedServerConsoleState(
+            serverName,
+            port,
+            maxPlayers,
+            timeLimitMinutes,
+            capLimit,
+            respawnSeconds,
+            lobbyAnnounce,
+            autoBalance);
+        AppendHostedServerLog("launcher", $"Start Server pressed for UDP port {port}.");
 
         if (!TryStartHostedServer(
                 serverName,
@@ -158,6 +233,53 @@ public partial class Game1
         _pendingHostedConnectTicks = -1;
         _pendingHostedConnectPort = port;
         _hostSetupEditField = HostSetupEditField.None;
-        _menuStatusMessage = $"Dedicated server running on UDP port {port}.";
+        _hostSetupTab = HostSetupTab.ServerConsole;
+        _menuStatusMessage = $"Starting dedicated server on UDP port {port}...";
+    }
+
+    private void BeginDedicatedServerTerminalLaunch(
+        string serverName,
+        int port,
+        int maxPlayers,
+        string password,
+        int timeLimitMinutes,
+        int capLimit,
+        int respawnSeconds,
+        bool lobbyAnnounce,
+        bool autoBalance)
+    {
+        CloseManualConnectMenu(clearStatus: true);
+        CloseLobbyBrowser(clearStatus: true);
+        _optionsMenuOpen = false;
+        _creditsOpen = false;
+        _controlsMenuOpen = false;
+        InitializeHostedServerLog(reset: true);
+        PrimeHostedServerConsoleState(
+            serverName,
+            port,
+            maxPlayers,
+            timeLimitMinutes,
+            capLimit,
+            respawnSeconds,
+            lobbyAnnounce,
+            autoBalance);
+
+        if (!TryStartHostedServerInTerminal(
+                serverName,
+                port,
+                maxPlayers,
+                password,
+                timeLimitMinutes,
+                capLimit,
+                respawnSeconds,
+                lobbyAnnounce,
+                autoBalance,
+                out var error))
+        {
+            _menuStatusMessage = error;
+            return;
+        }
+
+        Exit();
     }
 }

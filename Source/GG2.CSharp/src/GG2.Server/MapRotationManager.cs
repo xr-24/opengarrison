@@ -33,6 +33,10 @@ sealed class MapRotationManager
         return ServerHelpers.TryApplyPendingMapChange(_world, _mapRotation, ref _mapRotationIndex, _log);
     }
 
+    public IReadOnlyList<string> MapRotation => _mapRotation;
+
+    public int CurrentRotationIndex => _mapRotationIndex;
+
     private void InitializeWorldLevel(string? requestedMap)
     {
         if (!string.IsNullOrWhiteSpace(requestedMap))

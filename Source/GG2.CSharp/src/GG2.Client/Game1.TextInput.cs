@@ -155,6 +155,11 @@ public partial class Game1
 
     private bool HandleHostSetupTextInput(TextInputEventArgs e)
     {
+        if (IsServerLauncherMode && _hostSetupTab == HostSetupTab.ServerConsole)
+        {
+            return HandleHostedServerConsoleTextInput(e);
+        }
+
         switch (e.Character)
         {
             case '\b':
@@ -271,6 +276,39 @@ public partial class Game1
                     {
                         _hostRespawnSecondsBuffer += e.Character;
                     }
+                }
+                break;
+        }
+
+        if (_hostSetupEditField != HostSetupEditField.None)
+        {
+            _menuStatusMessage = string.Empty;
+        }
+
+        return true;
+    }
+
+    private bool HandleHostedServerConsoleTextInput(TextInputEventArgs e)
+    {
+        switch (e.Character)
+        {
+            case '\b':
+                if (_hostedServerCommandInput.Length > 0)
+                {
+                    _hostedServerCommandInput = _hostedServerCommandInput[..^1];
+                }
+                break;
+            case '\r':
+            case '\n':
+                ExecuteHostedServerCommandFromUi(_hostedServerCommandInput);
+                break;
+            case '\t':
+                _hostSetupEditField = HostSetupEditField.ServerConsoleCommand;
+                break;
+            default:
+                if (!char.IsControl(e.Character) && _hostedServerCommandInput.Length < 120)
+                {
+                    _hostedServerCommandInput += e.Character;
                 }
                 break;
         }

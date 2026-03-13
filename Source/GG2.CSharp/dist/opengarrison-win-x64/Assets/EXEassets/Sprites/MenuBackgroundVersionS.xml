@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<sprite>
+  <origin x="300" y="300"/>
+  <mask>
+    <separate>false</separate>
+    <shape>PRECISE</shape>
+    <bounds alphaTolerance="0" mode="MANUAL">
+      <left>304</left>
+      <right>587</right>
+      <top>508</top>
+      <bottom>580</bottom>
+    </bounds>
+  </mask>
+  <preload>true</preload>
+  <smoothEdges>false</smoothEdges>
+  <transparent>false</transparent>
+</sprite>

@@ -1,16 +1,24 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using GG2.Core;
 using GG2.Protocol;
 using static ServerHelpers;
 
 sealed class GameServer
 {
+    private sealed record PendingConsoleCommand(
+        string Command,
+        bool EchoToConsole,
+        TaskCompletionSource<IReadOnlyList<string>>? Completion);
+
     private const int WsaConnReset = 10054;
     private const int SioUdpConnReset = -1744830452;
     private const int MaxNewHelloAttemptsPerWindow = 8;
@@ -48,6 +56,7 @@ sealed class GameServer
     private readonly ulong _transientEventReplayTicks;
     private readonly bool _passwordRequired;
     private readonly byte[] _protocolUuidBytes;
+    private readonly ConcurrentQueue<PendingConsoleCommand> _pendingConsoleCommands = new();
 
     private UdpClient _udp = null!;
     private LobbyServerRegistrar? _lobbyRegistrar;
@@ -218,13 +227,23 @@ sealed class GameServer
         {
             Console.WriteLine($"[server] lobby registration enabled host={_lobbyHost}:{_lobbyPort}");
         }
-        Console.WriteLine("[server] type \"shutdown\" to stop.");
+        Console.WriteLine("[server] type \"help\" for commands. Type \"shutdown\" to stop.");
+        foreach (var line in BuildConsoleCommandResponse("status"))
+        {
+            Console.WriteLine(line);
+        }
+
+        foreach (var line in BuildConsoleCommandResponse("rotation"))
+        {
+            Console.WriteLine(line);
+        }
         Console.WriteLine("Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.");
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                ProcessPendingConsoleCommands();
                 _helloRateLimiter.Prune();
                 _passwordRateLimiter.Prune();
                 _sessionManager.PruneTimedOutClients();
@@ -267,6 +286,28 @@ sealed class GameServer
             NotifyClientsOfShutdown();
             Console.WriteLine("[server] shutdown complete.");
         }
+    }
+
+    public void EnqueueConsoleCommand(string command)
+    {
+        if (!string.IsNullOrWhiteSpace(command))
+        {
+            _pendingConsoleCommands.Enqueue(new PendingConsoleCommand(command.Trim(), EchoToConsole: true, Completion: null));
+        }
+    }
+
+    public Task<IReadOnlyList<string>> ExecuteAdminCommandAsync(string command, bool echoToConsole, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<IReadOnlyList<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            tcs.TrySetCanceled(cancellationToken);
+            return tcs.Task;
+        }
+
+        cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+        _pendingConsoleCommands.Enqueue(new PendingConsoleCommand(command.Trim(), echoToConsole, tcs));
+        return tcs.Task;
     }
 
     private void PumpIncomingPackets()
@@ -429,6 +470,167 @@ sealed class GameServer
         _helloRateLimiter.Reset(remoteEndPoint);
         _passwordRateLimiter.Reset(remoteEndPoint);
         Console.WriteLine($"[server] client connected {remoteEndPoint} slot={assignedSlot} name=\"{hello.Name}\" version={hello.Version}");
+    }
+
+    private void ProcessPendingConsoleCommands()
+    {
+        while (_pendingConsoleCommands.TryDequeue(out var request))
+        {
+            var lines = BuildConsoleCommandResponse(request.Command);
+            if (request.EchoToConsole)
+            {
+                foreach (var line in lines)
+                {
+                    Console.WriteLine(line);
+                }
+            }
+
+            request.Completion?.TrySetResult(lines);
+        }
+    }
+
+    private List<string> BuildConsoleCommandResponse(string command)
+    {
+        var lines = new List<string>();
+        var normalized = command.Trim();
+        if (normalized.Length == 0)
+        {
+            return lines;
+        }
+
+        if (string.Equals(normalized, "help", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "?", StringComparison.OrdinalIgnoreCase))
+        {
+            lines.Add("[server] commands: help, status, players, map, rules, lobby, rotation, shutdown");
+            lines.Add("[server] aliases: info -> status, level -> map, who -> players, maps -> rotation");
+            return lines;
+        }
+
+        if (string.Equals(normalized, "status", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "info", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsoleStatusSummary(lines);
+            AddConsoleRulesSummary(lines);
+            AddConsoleLobbySummary(lines);
+            AddConsoleMapSummary(lines);
+            return lines;
+        }
+
+        if (string.Equals(normalized, "players", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "who", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsolePlayersSummary(lines);
+            return lines;
+        }
+
+        if (string.Equals(normalized, "map", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "level", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsoleMapSummary(lines);
+            return lines;
+        }
+
+        if (string.Equals(normalized, "rules", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsoleRulesSummary(lines);
+            return lines;
+        }
+
+        if (string.Equals(normalized, "lobby", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsoleLobbySummary(lines);
+            return lines;
+        }
+
+        if (string.Equals(normalized, "rotation", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "maps", StringComparison.OrdinalIgnoreCase))
+        {
+            AddConsoleRotationSummary(lines);
+            return lines;
+        }
+
+        lines.Add($"[server] unknown command \"{normalized}\". Type help for commands.");
+        return lines;
+    }
+
+    private void AddConsoleStatusSummary(List<string> lines)
+    {
+        var activePlayableCount = _world.EnumerateActiveNetworkPlayers().Count();
+        var spectatorCount = _clientsBySlot.Keys.Count(IsSpectatorSlot);
+        var uptime = FormatDuration(_clock.Elapsed);
+        var lobbyValue = _useLobbyServer ? $"enabled {_lobbyHost}:{_lobbyPort}" : "disabled";
+        var passwordValue = _passwordRequired ? "required" : "off";
+        lines.Add(
+            $"[server] status | name={_serverName} | port={_port} | players={activePlayableCount}/{_maxPlayableClients} | spectators={spectatorCount} | map={_world.Level.Name} area={_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount} | mode={_world.MatchRules.Mode} | phase={_world.MatchState.Phase} | score={_world.RedCaps}-{_world.BlueCaps} | lobby={lobbyValue} | password={passwordValue} | uptime={uptime}");
+    }
+
+    private void AddConsoleRulesSummary(List<string> lines)
+    {
+        var autoBalanceValue = _autoBalanceEnabled ? "enabled" : "disabled";
+        var respawnSeconds = _respawnSecondsOverride ?? 5;
+        lines.Add(
+            $"[server] rules | timeLimit={_world.MatchRules.TimeLimitMinutes} | capLimit={_world.MatchRules.CapLimit} | respawn={respawnSeconds} | autoBalance={autoBalanceValue}");
+    }
+
+    private void AddConsoleLobbySummary(List<string> lines)
+    {
+        var lobbyValue = _useLobbyServer ? "enabled" : "disabled";
+        lines.Add($"[server] lobby | enabled={lobbyValue} | host={_lobbyHost} | port={_lobbyPort}");
+    }
+
+    private void AddConsoleMapSummary(List<string> lines)
+    {
+        var winner = _world.MatchState.WinnerTeam?.ToString() ?? "none";
+        lines.Add(
+            $"[server] map | name={_world.Level.Name} | area={_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount} | mode={_world.MatchRules.Mode} | phase={_world.MatchState.Phase} | winner={winner} | imported={_world.Level.ImportedFromSource}");
+        lines.Add($"[server] world | bounds={_world.Bounds.Width}x{_world.Bounds.Height}");
+    }
+
+    private void AddConsoleRotationSummary(List<string> lines)
+    {
+        var rotation = _mapRotationManager.MapRotation;
+        var currentIndex = rotation.Count == 0 ? 0 : Math.Clamp(_mapRotationManager.CurrentRotationIndex + 1, 1, rotation.Count);
+        var source = string.IsNullOrWhiteSpace(_mapRotationFile) ? "stock" : _mapRotationFile!;
+        var entries = rotation.Count == 0 ? _world.Level.Name : string.Join(", ", rotation);
+        lines.Add($"[server] rotation | source={source} | current={currentIndex}/{Math.Max(1, rotation.Count)} | entries={entries}");
+    }
+
+    private void AddConsolePlayersSummary(List<string> lines)
+    {
+        if (_clientsBySlot.Count == 0)
+        {
+            lines.Add("[server] players | count=0");
+            return;
+        }
+
+        lines.Add($"[server] players | count={_clientsBySlot.Count}");
+        foreach (var client in _clientsBySlot.Values.OrderBy(entry => entry.Slot))
+        {
+            var role = "Spectator";
+            if (!IsSpectatorSlot(client.Slot))
+            {
+                role = _world.TryGetNetworkPlayer(client.Slot, out var player)
+                    ? player.Team.ToString()
+                    : "Unassigned";
+            }
+
+            var connectedFor = FormatDuration(_clock.Elapsed - client.ConnectedAt);
+            var authorized = client.IsAuthorized ? "yes" : "pending";
+            lines.Add(
+                $"[server] player | slot={client.Slot} | name={client.Name} | role={role} | authorized={authorized} | endpoint={client.EndPoint} | connected={connectedFor}");
+        }
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration < TimeSpan.Zero)
+        {
+            duration = TimeSpan.Zero;
+        }
+
+        return duration.TotalHours >= 1d
+            ? duration.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
+            : duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
     }
 
     private void SendServerStatus(IPEndPoint remoteEndPoint)

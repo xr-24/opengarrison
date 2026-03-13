@@ -3,7 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.IO.Pipes;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 using GG2.Core;
 
 namespace GG2.Client;
@@ -15,6 +20,9 @@ public partial class Game1
     private int _pendingHostedConnectTicks = -1;
     private int _pendingHostedConnectPort = 8190;
     private Process? _hostedServerProcess;
+    private readonly object _hostedServerLogSync = new();
+    private string? _hostedServerLogPath;
+    private string? _hostedServerLastOutputLine;
     private string? _recentConnectHost;
     private int _recentConnectPort;
 
@@ -199,6 +207,14 @@ public partial class Game1
         error = string.Empty;
 
         StopHostedServer();
+        HostedServerSessionInfo.Delete();
+
+        if (!IsUdpPortAvailable(port))
+        {
+            error = $"UDP port {port} is already in use.";
+            AppendHostedServerLog("launcher", error);
+            return false;
+        }
 
         var serverLaunchTarget = FindServerLaunchTarget();
         if (serverLaunchTarget is null)
@@ -209,32 +225,49 @@ public partial class Game1
 
         try
         {
-            var configArg = $" --config \"{RuntimePaths.GetConfigPath(Gg2PreferencesDocument.DefaultFileName)}\"";
-            var portArg = port > 0 ? $" --port {port}" : string.Empty;
-            var nameArg = string.IsNullOrWhiteSpace(serverName) ? string.Empty : $" --name \"{serverName}\"";
-            var maxPlayersArg = maxPlayers > 0 ? $" --max-players {maxPlayers}" : string.Empty;
-            var passwordArg = string.IsNullOrWhiteSpace(password) ? string.Empty : $" --password \"{password}\"";
-            var timeLimitArg = timeLimitMinutes > 0 ? $" --time-limit {timeLimitMinutes}" : string.Empty;
-            var capLimitArg = capLimit > 0 ? $" --cap-limit {capLimit}" : string.Empty;
-            var respawnArg = respawnSeconds >= 0 ? $" --respawn-seconds {respawnSeconds}" : string.Empty;
-            var lobbyArg = lobbyAnnounce ? " --lobby" : " --no-lobby";
-            var autoBalanceArg = autoBalance ? " --auto-balance" : " --no-auto-balance";
-            var arguments = $"{serverLaunchTarget.ArgumentsPrefix}{configArg}{portArg}{nameArg}{maxPlayersArg}{passwordArg}{timeLimitArg}{capLimitArg}{respawnArg}{lobbyArg}{autoBalanceArg}".Trim();
+            InitializeHostedServerLog(reset: false);
+            _hostedServerLastOutputLine = null;
+
+            var arguments = BuildHostedServerLaunchArguments(
+                serverLaunchTarget,
+                serverName,
+                port,
+                maxPlayers,
+                password,
+                timeLimitMinutes,
+                capLimit,
+                respawnSeconds,
+                lobbyAnnounce,
+                autoBalance);
             var startInfo = new ProcessStartInfo(
                 serverLaunchTarget.FileName,
                 arguments)
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardInput = true,
                 WorkingDirectory = serverLaunchTarget.WorkingDirectory,
             };
-            _hostedServerProcess = Process.Start(startInfo);
-            if (_hostedServerProcess is null)
+            startInfo.Environment["OPENGARRISON_LAUNCH_MODE"] = "launcher";
+            AppendHostedServerLog("launcher", $"Starting {serverLaunchTarget.FileName} {arguments}");
+            var process = Process.Start(startInfo);
+            if (process is null)
             {
                 error = "Failed to start local server process.";
                 return false;
             }
+
+            process.EnableRaisingEvents = true;
+            process.Exited += (_, _) =>
+            {
+                try
+                {
+                    AppendHostedServerLog("launcher", $"Server process exited with code {process.ExitCode}.");
+                }
+                catch
+                {
+                }
+            };
+            _hostedServerProcess = process;
 
             return true;
         }
@@ -245,31 +278,98 @@ public partial class Game1
         }
     }
 
+    private bool TryStartHostedServerInTerminal(
+        string serverName,
+        int port,
+        int maxPlayers,
+        string password,
+        int timeLimitMinutes,
+        int capLimit,
+        int respawnSeconds,
+        bool lobbyAnnounce,
+        bool autoBalance,
+        out string error)
+    {
+        error = string.Empty;
+
+        if (!IsUdpPortAvailable(port))
+        {
+            error = $"UDP port {port} is already in use.";
+            return false;
+        }
+
+        var serverLaunchTarget = FindServerLaunchTarget();
+        if (serverLaunchTarget is null)
+        {
+            error = "Could not find GG2.Server. Build the server first.";
+            return false;
+        }
+
+        try
+        {
+            HostedServerSessionInfo.Delete();
+            InitializeHostedServerLog(reset: true);
+            var arguments = BuildHostedServerLaunchArguments(
+                serverLaunchTarget,
+                serverName,
+                port,
+                maxPlayers,
+                password,
+                timeLimitMinutes,
+                capLimit,
+                respawnSeconds,
+                lobbyAnnounce,
+                autoBalance);
+            var startInfo = new ProcessStartInfo(
+                serverLaunchTarget.FileName,
+                arguments)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = serverLaunchTarget.WorkingDirectory,
+            };
+            Process.Start(startInfo);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to start dedicated server terminal: {ex.Message}";
+            return false;
+        }
+    }
+
     private void StopHostedServer()
     {
-        if (_hostedServerProcess is null)
+        var session = _hostedServerSession;
+        if (session is null && _hostedServerProcess is null)
         {
             return;
         }
 
         try
         {
-            if (!_hostedServerProcess.HasExited)
+            if (session is not null)
             {
-                try
+                AppendHostedServerLog("launcher", "Stop requested for hosted server.");
+                if (!TrySendHostedServerAdminCommand("shutdown", out _, out var shutdownError))
                 {
-                    _hostedServerProcess.StandardInput.WriteLine("shutdown");
-                    _hostedServerProcess.StandardInput.Flush();
-                }
-                catch
-                {
+                    AppendHostedServerLog("launcher", shutdownError);
                 }
 
-                if (!_hostedServerProcess.WaitForExit(2000))
+                if (TryGetHostedServerProcess(session.ProcessId, out var processToStop)
+                    && processToStop is not null
+                    && !processToStop.WaitForExit(2000)
+                    && _hostedServerProcess is not null
+                    && _hostedServerProcess.Id == session.ProcessId)
                 {
+                    AppendHostedServerLog("launcher", "Hosted server did not exit after shutdown; terminating process tree.");
                     _hostedServerProcess.Kill(entireProcessTree: true);
                     _hostedServerProcess.WaitForExit(1000);
                 }
+            }
+            else if (_hostedServerProcess is not null && !_hostedServerProcess.HasExited)
+            {
+                _hostedServerProcess.Kill(entireProcessTree: true);
+                _hostedServerProcess.WaitForExit(1000);
             }
         }
         catch
@@ -277,8 +377,10 @@ public partial class Game1
         }
         finally
         {
-            _hostedServerProcess.Dispose();
+            _hostedServerProcess?.Dispose();
             _hostedServerProcess = null;
+            _hostedServerSession = null;
+            HostedServerSessionInfo.Delete();
         }
     }
 
@@ -393,5 +495,605 @@ public partial class Game1
                 directory = directory.Parent;
             }
         }
+    }
+
+    private void AppendHostedServerLog(string source, string message)
+    {
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}] {message}{Environment.NewLine}";
+        lock (_hostedServerLogSync)
+        {
+            _hostedServerLastOutputLine = message;
+            _hostedServerConsoleLines.Add(line.TrimEnd('\r', '\n'));
+            while (_hostedServerConsoleLines.Count > 240)
+            {
+                _hostedServerConsoleLines.RemoveAt(0);
+            }
+
+            UpdateHostedServerConsoleStatusUnsafe(source, message);
+
+            if (!string.IsNullOrWhiteSpace(_hostedServerLogPath))
+            {
+                File.AppendAllText(_hostedServerLogPath, line);
+                _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
+            }
+        }
+    }
+
+    private void InitializeHostedServerLog(bool reset)
+    {
+        var logPath = RuntimePaths.GetConfigPath("hosted-server.log");
+        lock (_hostedServerLogSync)
+        {
+            _hostedServerLogPath = logPath;
+            if (reset || !File.Exists(logPath))
+            {
+                ResetHostedServerConsoleStateUnsafe();
+                File.WriteAllText(logPath, string.Empty);
+            }
+
+            _hostedServerLogReadPosition = File.Exists(logPath) ? new FileInfo(logPath).Length : 0L;
+        }
+    }
+
+    private static bool IsUdpPortAvailable(int port)
+    {
+        try
+        {
+            using var probe = new UdpClient(port);
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+    }
+
+    private string BuildHostedServerExitMessage()
+    {
+        var details = string.IsNullOrWhiteSpace(_hostedServerLastOutputLine)
+            ? "See config\\hosted-server.log for details."
+            : _hostedServerLastOutputLine;
+
+        return string.IsNullOrWhiteSpace(_hostedServerLogPath)
+            ? $"Dedicated server exited. {details}"
+            : $"Dedicated server exited. {details} Log: {Path.GetFileName(_hostedServerLogPath)}";
+    }
+
+    private void PrimeHostedServerConsoleState(
+        string serverName,
+        int port,
+        int maxPlayers,
+        int timeLimitMinutes,
+        int capLimit,
+        int respawnSeconds,
+        bool lobbyAnnounce,
+        bool autoBalance)
+    {
+        lock (_hostedServerLogSync)
+        {
+            _hostedServerCommandInput = string.Empty;
+            _hostedServerStatusName = serverName;
+            _hostedServerStatusPort = port.ToString(CultureInfo.InvariantCulture);
+            _hostedServerStatusPlayers = $"0/{maxPlayers}";
+            _hostedServerStatusLobby = lobbyAnnounce ? "Enabled" : "Disabled";
+            _hostedServerStatusMap = GetSelectedHostMapEntry()?.DisplayName ?? "Waiting for map bootstrap";
+            _hostedServerStatusRules = $"{timeLimitMinutes} min | cap {capLimit} | respawn {respawnSeconds}s | auto-balance {(autoBalance ? "on" : "off")}";
+            _hostedServerStatusRuntime = "Launching dedicated server...";
+            _hostedServerStatusWorld = "Waiting for world bootstrap";
+        }
+    }
+
+    private bool TrySendHostedServerCommand(string command, out string error)
+    {
+        var trimmed = command.Trim();
+        if (trimmed.Length == 0)
+        {
+            error = "Type a server command first.";
+            return false;
+        }
+
+        if (!IsHostedServerRunning)
+        {
+            error = "Dedicated server is not running.";
+            return false;
+        }
+
+        if (!TrySendHostedServerAdminCommand(trimmed, out var responseLines, out error))
+        {
+            return false;
+        }
+
+        lock (_hostedServerLogSync)
+        {
+            foreach (var line in responseLines)
+            {
+                UpdateHostedServerConsoleStatusUnsafe("server", line);
+            }
+        }
+
+        _hostedServerCommandInput = string.Empty;
+        AppendHostedServerLog("launcher", $"> {trimmed}");
+        return true;
+    }
+
+    private void ClearHostedServerConsoleView()
+    {
+        lock (_hostedServerLogSync)
+        {
+            _hostedServerConsoleLines.Clear();
+            _hostedServerLastOutputLine = null;
+            if (!string.IsNullOrWhiteSpace(_hostedServerLogPath) && File.Exists(_hostedServerLogPath))
+            {
+                _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
+            }
+        }
+    }
+
+    private List<string> GetHostedServerConsoleLinesSnapshot()
+    {
+        lock (_hostedServerLogSync)
+        {
+            return _hostedServerConsoleLines.ToList();
+        }
+    }
+
+    private void ResetHostedServerConsoleStateUnsafe()
+    {
+        _hostedServerConsoleLines.Clear();
+        _hostedServerLastOutputLine = null;
+        _hostedServerLogReadPosition = 0L;
+        _hostedServerStatusName = "Offline";
+        _hostedServerStatusPort = "--";
+        _hostedServerStatusPlayers = "0/0";
+        _hostedServerStatusLobby = "Lobby unknown";
+        _hostedServerStatusMap = "Map unknown";
+        _hostedServerStatusRules = "Rules unknown";
+        _hostedServerStatusRuntime = "No live server output yet.";
+        _hostedServerStatusWorld = "World bounds unknown";
+    }
+
+    private void UpdateHostedServerConsoleStatusUnsafe(string source, string message)
+    {
+        if (source.StartsWith("launcher", StringComparison.OrdinalIgnoreCase))
+        {
+            if (message.Contains("initialized", StringComparison.OrdinalIgnoreCase))
+            {
+                _hostedServerStatusRuntime = "Launcher ready.";
+            }
+            else if (message.StartsWith("Start Server pressed", StringComparison.OrdinalIgnoreCase)
+                || message.StartsWith("Starting ", StringComparison.OrdinalIgnoreCase))
+            {
+                _hostedServerStatusRuntime = "Launching dedicated server...";
+            }
+            else if (message.StartsWith("> ", StringComparison.Ordinal))
+            {
+                _hostedServerStatusRuntime = $"Sent command {message[2..]}";
+            }
+            else if (message.Contains("exited", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("stopped", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("terminating", StringComparison.OrdinalIgnoreCase))
+            {
+                _hostedServerStatusRuntime = message;
+            }
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] status | ", out var statusValues))
+        {
+            if (statusValues.TryGetValue("name", out var name))
+            {
+                _hostedServerStatusName = name;
+            }
+
+            if (statusValues.TryGetValue("port", out var port))
+            {
+                _hostedServerStatusPort = port;
+            }
+
+            if (statusValues.TryGetValue("players", out var players))
+            {
+                var spectatorsSuffix = statusValues.TryGetValue("spectators", out var spectators)
+                    ? $" ({spectators} spectators)"
+                    : string.Empty;
+                _hostedServerStatusPlayers = players + spectatorsSuffix;
+            }
+
+            if (statusValues.TryGetValue("lobby", out var lobby))
+            {
+                _hostedServerStatusLobby = lobby;
+            }
+
+            if (statusValues.TryGetValue("map", out var map))
+            {
+                _hostedServerStatusMap = map;
+            }
+
+            var runtimeParts = new List<string>();
+            if (statusValues.TryGetValue("mode", out var mode))
+            {
+                runtimeParts.Add(mode);
+            }
+
+            if (statusValues.TryGetValue("phase", out var phase))
+            {
+                runtimeParts.Add(phase);
+            }
+
+            if (statusValues.TryGetValue("score", out var score))
+            {
+                runtimeParts.Add($"score {score}");
+            }
+
+            if (statusValues.TryGetValue("uptime", out var uptime))
+            {
+                runtimeParts.Add($"uptime {uptime}");
+            }
+
+            if (runtimeParts.Count > 0)
+            {
+                _hostedServerStatusRuntime = string.Join(" | ", runtimeParts);
+            }
+
+            return;
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] rules | ", out var ruleValues))
+        {
+            var ruleParts = new List<string>();
+            if (ruleValues.TryGetValue("timeLimit", out var timeLimit))
+            {
+                ruleParts.Add($"{timeLimit} min");
+            }
+
+            if (ruleValues.TryGetValue("capLimit", out var capLimit))
+            {
+                ruleParts.Add($"cap {capLimit}");
+            }
+
+            if (ruleValues.TryGetValue("respawn", out var respawn))
+            {
+                ruleParts.Add($"respawn {respawn}s");
+            }
+
+            if (ruleValues.TryGetValue("autoBalance", out var autoBalance))
+            {
+                ruleParts.Add($"auto-balance {autoBalance}");
+            }
+
+            if (ruleParts.Count > 0)
+            {
+                _hostedServerStatusRules = string.Join(" | ", ruleParts);
+            }
+
+            return;
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] lobby | ", out var lobbyValues))
+        {
+            var enabled = lobbyValues.TryGetValue("enabled", out var enabledValue) ? enabledValue : "unknown";
+            if (enabled.Equals("enabled", StringComparison.OrdinalIgnoreCase)
+                && lobbyValues.TryGetValue("host", out var host)
+                && lobbyValues.TryGetValue("port", out var lobbyPort))
+            {
+                _hostedServerStatusLobby = $"Enabled ({host}:{lobbyPort})";
+            }
+            else
+            {
+                _hostedServerStatusLobby = enabled.Equals("disabled", StringComparison.OrdinalIgnoreCase)
+                    ? "Disabled"
+                    : enabled;
+            }
+
+            return;
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] map | ", out var mapValues))
+        {
+            if (mapValues.TryGetValue("name", out var mapName))
+            {
+                var area = mapValues.TryGetValue("area", out var areaValue) ? $" area {areaValue}" : string.Empty;
+                var mode = mapValues.TryGetValue("mode", out var modeValue) ? $" | {modeValue}" : string.Empty;
+                _hostedServerStatusMap = mapName + area + mode;
+            }
+
+            return;
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] world | ", out var worldValues))
+        {
+            if (worldValues.TryGetValue("bounds", out var bounds))
+            {
+                _hostedServerStatusWorld = bounds;
+            }
+
+            return;
+        }
+
+        if (TryParseHostedServerKeyValues(message, "[server] rotation | ", out var rotationValues))
+        {
+            if (rotationValues.TryGetValue("current", out var current)
+                && rotationValues.TryGetValue("source", out var rotationSource))
+            {
+                _hostedServerStatusRuntime = $"Rotation {current} from {rotationSource}";
+            }
+
+            return;
+        }
+
+        if (message.StartsWith("[server] frame=", StringComparison.OrdinalIgnoreCase))
+        {
+            _hostedServerStatusRuntime = message[9..];
+        }
+    }
+
+    private bool TryResumeHostedServerSession(bool loadExistingLog, int? expectedProcessId = null)
+    {
+        var session = HostedServerSessionInfo.Load();
+        if (session is null)
+        {
+            return false;
+        }
+
+        if (expectedProcessId.HasValue && session.ProcessId != expectedProcessId.Value)
+        {
+            return false;
+        }
+
+        if (!TryGetHostedServerProcess(session.ProcessId, out _))
+        {
+            HostedServerSessionInfo.Delete();
+            return false;
+        }
+
+        _hostedServerSession = session;
+        _hostedServerLogPath = string.IsNullOrWhiteSpace(session.LogPath)
+            ? RuntimePaths.GetConfigPath(HostedServerSessionInfo.DefaultLogFileName)
+            : session.LogPath;
+        _hostedServerStatusName = string.IsNullOrWhiteSpace(session.ServerName) ? _hostedServerStatusName : session.ServerName;
+        _hostedServerStatusPort = session.Port > 0 ? session.Port.ToString(CultureInfo.InvariantCulture) : _hostedServerStatusPort;
+
+        if (!TrySendHostedServerAdminCommand("__ping", out _, out _))
+        {
+            return false;
+        }
+
+        if (loadExistingLog)
+        {
+            ReloadHostedServerLogSnapshot();
+        }
+        else if (!string.IsNullOrWhiteSpace(_hostedServerLogPath) && File.Exists(_hostedServerLogPath))
+        {
+            _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
+        }
+
+        TrySendHostedServerAdminCommand("__snapshot", out var snapshotLines, out _);
+        lock (_hostedServerLogSync)
+        {
+            foreach (var line in snapshotLines)
+            {
+                UpdateHostedServerConsoleStatusUnsafe("server", line);
+            }
+        }
+
+        return true;
+    }
+
+    private void PollHostedServerLog()
+    {
+        if (string.IsNullOrWhiteSpace(_hostedServerLogPath) || !File.Exists(_hostedServerLogPath))
+        {
+            return;
+        }
+
+        lock (_hostedServerLogSync)
+        {
+            using var stream = new FileStream(_hostedServerLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            if (stream.Length < _hostedServerLogReadPosition)
+            {
+                _hostedServerLogReadPosition = 0L;
+            }
+
+            if (stream.Length == _hostedServerLogReadPosition)
+            {
+                return;
+            }
+
+            stream.Seek(_hostedServerLogReadPosition, SeekOrigin.Begin);
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            var text = reader.ReadToEnd();
+            _hostedServerLogReadPosition = stream.Position;
+            ProcessHostedServerLogChunkUnsafe(text);
+        }
+    }
+
+    private void ReloadHostedServerLogSnapshot()
+    {
+        if (string.IsNullOrWhiteSpace(_hostedServerLogPath) || !File.Exists(_hostedServerLogPath))
+        {
+            return;
+        }
+
+        lock (_hostedServerLogSync)
+        {
+            _hostedServerConsoleLines.Clear();
+            _hostedServerLastOutputLine = null;
+            var text = File.ReadAllText(_hostedServerLogPath);
+            ProcessHostedServerLogChunkUnsafe(text);
+            _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
+        }
+    }
+
+    private void ProcessHostedServerLogChunkUnsafe(string text)
+    {
+        using var reader = new StringReader(text);
+        string? rawLine;
+        while ((rawLine = reader.ReadLine()) is not null)
+        {
+            if (string.IsNullOrWhiteSpace(rawLine))
+            {
+                continue;
+            }
+
+            _hostedServerConsoleLines.Add(rawLine);
+            while (_hostedServerConsoleLines.Count > 240)
+            {
+                _hostedServerConsoleLines.RemoveAt(0);
+            }
+
+            if (TrySplitHostedServerLogLine(rawLine, out var source, out var message))
+            {
+                _hostedServerLastOutputLine = message;
+                UpdateHostedServerConsoleStatusUnsafe(source, message);
+            }
+            else
+            {
+                _hostedServerLastOutputLine = rawLine;
+                UpdateHostedServerConsoleStatusUnsafe("server", rawLine);
+            }
+        }
+    }
+
+    private static bool TrySplitHostedServerLogLine(string rawLine, out string source, out string message)
+    {
+        source = string.Empty;
+        message = string.Empty;
+        if (!rawLine.StartsWith('['))
+        {
+            return false;
+        }
+
+        var sourceStart = rawLine.IndexOf("] [", StringComparison.Ordinal);
+        if (sourceStart < 0)
+        {
+            return false;
+        }
+
+        var messageStart = rawLine.IndexOf("] ", sourceStart + 3, StringComparison.Ordinal);
+        if (messageStart < 0)
+        {
+            return false;
+        }
+
+        source = rawLine[(sourceStart + 3)..messageStart];
+        message = rawLine[(messageStart + 2)..];
+        return true;
+    }
+
+    private static bool TryGetHostedServerProcess(int processId, out Process? process)
+    {
+        process = null;
+        try
+        {
+            process = Process.GetProcessById(processId);
+            if (process.HasExited)
+            {
+                process.Dispose();
+                process = null;
+                return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            process?.Dispose();
+            process = null;
+            return false;
+        }
+    }
+
+    private bool TrySendHostedServerAdminCommand(string command, out List<string> responseLines, out string error)
+    {
+        responseLines = new List<string>();
+        error = string.Empty;
+        if (_hostedServerSession is null || string.IsNullOrWhiteSpace(_hostedServerSession.PipeName))
+        {
+            error = "Dedicated server control channel is unavailable.";
+            return false;
+        }
+
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", _hostedServerSession.PipeName, PipeDirection.InOut, PipeOptions.None);
+            pipe.Connect(1000);
+            using var writer = new StreamWriter(pipe, Encoding.UTF8, bufferSize: 1024, leaveOpen: true)
+            {
+                AutoFlush = true,
+            };
+            using var reader = new StreamReader(pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
+            writer.WriteLine(command);
+            string? line;
+            while ((line = reader.ReadLine()) is not null)
+            {
+                if (string.Equals(line, "__END__", StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                responseLines.Add(line);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Dedicated server control channel failed: {ex.Message}";
+            return false;
+        }
+    }
+
+    private static string BuildHostedServerLaunchArguments(
+        HostedServerLaunchTarget serverLaunchTarget,
+        string serverName,
+        int port,
+        int maxPlayers,
+        string password,
+        int timeLimitMinutes,
+        int capLimit,
+        int respawnSeconds,
+        bool lobbyAnnounce,
+        bool autoBalance)
+    {
+        var configArg = $" --config \"{RuntimePaths.GetConfigPath(Gg2PreferencesDocument.DefaultFileName)}\"";
+        var portArg = port > 0 ? $" --port {port}" : string.Empty;
+        var nameArg = string.IsNullOrWhiteSpace(serverName) ? string.Empty : $" --name \"{serverName}\"";
+        var maxPlayersArg = maxPlayers > 0 ? $" --max-players {maxPlayers}" : string.Empty;
+        var passwordArg = string.IsNullOrWhiteSpace(password) ? string.Empty : $" --password \"{password}\"";
+        var timeLimitArg = timeLimitMinutes > 0 ? $" --time-limit {timeLimitMinutes}" : string.Empty;
+        var capLimitArg = capLimit > 0 ? $" --cap-limit {capLimit}" : string.Empty;
+        var respawnArg = respawnSeconds >= 0 ? $" --respawn-seconds {respawnSeconds}" : string.Empty;
+        var lobbyArg = lobbyAnnounce ? " --lobby" : " --no-lobby";
+        var autoBalanceArg = autoBalance ? " --auto-balance" : " --no-auto-balance";
+        return $"{serverLaunchTarget.ArgumentsPrefix}{configArg}{portArg}{nameArg}{maxPlayersArg}{passwordArg}{timeLimitArg}{capLimitArg}{respawnArg}{lobbyArg}{autoBalanceArg}".Trim();
+    }
+
+    private static bool TryParseHostedServerKeyValues(
+        string message,
+        string prefix,
+        out Dictionary<string, string> values)
+    {
+        values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!message.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = message[prefix.Length..].Split(" | ", StringSplitOptions.RemoveEmptyEntries);
+        foreach (var segment in segments)
+        {
+            var separatorIndex = segment.IndexOf('=');
+            if (separatorIndex <= 0 || separatorIndex >= segment.Length - 1)
+            {
+                continue;
+            }
+
+            var key = segment[..separatorIndex].Trim();
+            var value = segment[(separatorIndex + 1)..].Trim();
+            if (key.Length > 0)
+            {
+                values[key] = value;
+            }
+        }
+
+        return values.Count > 0;
     }
 }

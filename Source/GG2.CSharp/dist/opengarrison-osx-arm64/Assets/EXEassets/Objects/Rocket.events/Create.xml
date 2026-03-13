@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<event category="CREATE" id="0">
+  <actions>
+    <action id="603" library="1">
+      <!--action name: Code-->
+      <kind>CODE</kind>
+      <allowRelative>false</allowRelative>
+      <question>false</question>
+      <canApplyTo>true</canApplyTo>
+      <actionType>CODE</actionType>
+      <functionName/>
+      <relative>false</relative>
+      <not>false</not>
+      <appliesTo>.self</appliesTo>
+      <arguments>
+        <argument kind="STRING">{
+    hitDamage = 25;
+    explosionDamage = 30;
+    blastRadius = 65;
+    characterHit = -1;
+    exploded = false;
+    knockback = 8;
+    bubbled = false;
+    explodeImmediately = false;
+    
+    fade = false;
+    distanceToTravel = 800;
+    playersPassed = ds_list_create();
+    
+    alarm[1] = 20 / global.delta_factor;
+    alarm[2] = 30 / global.delta_factor;
+}
+</argument>
+      </arguments>
+    </action>
+  </actions>
+</event>

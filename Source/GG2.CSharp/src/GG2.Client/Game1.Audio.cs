@@ -67,7 +67,7 @@ public partial class Game1
 
     private void EnsureMenuMusicPlaying()
     {
-        if (_menuMusicInstance is null)
+        if (IsServerLauncherMode || _menuMusicInstance is null)
         {
             return;
         }

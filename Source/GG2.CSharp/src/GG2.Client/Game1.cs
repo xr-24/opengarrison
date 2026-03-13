@@ -51,6 +51,13 @@ public partial class Game1 : Game
         TimeLimit,
         CapLimit,
         RespawnSeconds,
+        ServerConsoleCommand,
+    }
+
+    private enum HostSetupTab
+    {
+        Settings,
+        ServerConsole,
     }
 
     private enum ControlsMenuBinding
@@ -147,6 +154,7 @@ public partial class Game1 : Game
     private int _hostMapIndex;
     private List<Gg2MapRotationEntry> _hostMapEntries = new();
     private HostSetupEditField _hostSetupEditField;
+    private HostSetupTab _hostSetupTab;
     private string _hostServerNameBuffer = "My Server";
     private string _hostPortBuffer = "8190";
     private string _hostSlotsBuffer = "10";
@@ -157,6 +165,19 @@ public partial class Game1 : Game
     private string _hostRespawnSecondsBuffer = "5";
     private bool _hostLobbyAnnounceEnabled = true;
     private bool _hostAutoBalanceEnabled = true;
+    private readonly List<string> _hostedServerConsoleLines = new();
+    private string _hostedServerCommandInput = string.Empty;
+    private string _hostedServerStatusName = "Offline";
+    private string _hostedServerStatusPort = "--";
+    private string _hostedServerStatusPlayers = "0/0";
+    private string _hostedServerStatusLobby = "Lobby unknown";
+    private string _hostedServerStatusMap = "Map unknown";
+    private string _hostedServerStatusRules = "Rules unknown";
+    private string _hostedServerStatusRuntime = "No live server output yet.";
+    private string _hostedServerStatusWorld = "World bounds unknown";
+    private HostedServerSessionInfo? _hostedServerSession;
+    private long _hostedServerLogReadPosition;
+    private int _hostedServerStatePollTicks;
     private string _playerNameEditBuffer = string.Empty;
     private string _connectHostBuffer = "127.0.0.1";
     private string _connectPortBuffer = "8190";

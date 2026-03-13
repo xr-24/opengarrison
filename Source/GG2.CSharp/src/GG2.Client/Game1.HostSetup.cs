@@ -15,6 +15,7 @@ public partial class Game1
     {
         _hostSetupOpen = true;
         _hostSetupHoverIndex = -1;
+        _hostSetupTab = HostSetupTab.Settings;
         _hostSetupEditField = HostSetupEditField.ServerName;
         _menuStatusMessage = string.Empty;
         _manualConnectOpen = false;
@@ -87,9 +88,117 @@ public partial class Game1
             out var autoBalanceBounds,
             out var hostBounds,
             out var backBounds);
+        var clickPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton != ButtonState.Pressed;
+
+        if (IsServerLauncherMode)
+        {
+            GetServerLauncherTabBounds(panel, out var settingsTabBounds, out var consoleTabBounds);
+            if (clickPressed)
+            {
+                if (settingsTabBounds.Contains(mouse.Position))
+                {
+                    _hostSetupTab = HostSetupTab.Settings;
+                    _hostSetupEditField = HostSetupEditField.ServerName;
+                    return;
+                }
+
+                if (consoleTabBounds.Contains(mouse.Position))
+                {
+                    _hostSetupTab = HostSetupTab.ServerConsole;
+                    _hostSetupEditField = HostSetupEditField.ServerConsoleCommand;
+                    return;
+                }
+            }
+        }
+
+        if (IsServerLauncherMode && _hostSetupTab == HostSetupTab.ServerConsole)
+        {
+            GetHostedServerConsoleLayout(
+                panel,
+                out _,
+                out _,
+                out var commandBounds,
+                out var sendBounds,
+                out var clearBounds,
+                out var statusCommandBounds,
+                out var playersCommandBounds,
+                out var rotationCommandBounds,
+                out var helpCommandBounds,
+                out hostBounds,
+                out backBounds);
+            var terminalBounds = GetHostSetupTerminalButtonBounds(panel);
+
+            if (!clickPressed)
+            {
+                return;
+            }
+
+            if (commandBounds.Contains(mouse.Position))
+            {
+                _hostSetupEditField = HostSetupEditField.ServerConsoleCommand;
+                return;
+            }
+
+            if (sendBounds.Contains(mouse.Position))
+            {
+                ExecuteHostedServerCommandFromUi(_hostedServerCommandInput);
+                return;
+            }
+
+            if (clearBounds.Contains(mouse.Position))
+            {
+                ClearHostedServerConsoleView();
+                _menuStatusMessage = "Console view cleared.";
+                return;
+            }
+
+            if (statusCommandBounds.Contains(mouse.Position))
+            {
+                ExecuteHostedServerCommandFromUi("status");
+                return;
+            }
+
+            if (playersCommandBounds.Contains(mouse.Position))
+            {
+                ExecuteHostedServerCommandFromUi("players");
+                return;
+            }
+
+            if (rotationCommandBounds.Contains(mouse.Position))
+            {
+                ExecuteHostedServerCommandFromUi("rotation");
+                return;
+            }
+
+            if (helpCommandBounds.Contains(mouse.Position))
+            {
+                ExecuteHostedServerCommandFromUi("help");
+                return;
+            }
+
+            if (!IsHostedServerRunning && hostBounds.Contains(mouse.Position))
+            {
+                TryHostFromSetup();
+            }
+            else if (!IsHostedServerRunning && terminalBounds.Contains(mouse.Position))
+            {
+                TryHostFromSetup(runInTerminal: true);
+            }
+            else if (backBounds.Contains(mouse.Position))
+            {
+                if (!TryHandleServerLauncherBackAction())
+                {
+                    _hostSetupOpen = false;
+                    _hostSetupEditField = HostSetupEditField.None;
+                }
+            }
+
+            return;
+        }
+
         const int listHeaderHeight = 20;
         const int rowHeight = 28;
-        var clickPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton != ButtonState.Pressed;
+        var launchTerminalBounds = GetHostSetupTerminalButtonBounds(panel);
 
         _hostSetupHoverIndex = -1;
         var listRowsBounds = new Rectangle(listBounds.X, listBounds.Y + listHeaderHeight, listBounds.Width, listBounds.Height - listHeaderHeight);
@@ -192,9 +301,13 @@ public partial class Game1
             return;
         }
 
-        if (hostBounds.Contains(mouse.Position))
+        if (!IsHostedServerRunning && hostBounds.Contains(mouse.Position))
         {
             TryHostFromSetup();
+        }
+        else if (IsServerLauncherMode && !IsHostedServerRunning && launchTerminalBounds.Contains(mouse.Position))
+        {
+            TryHostFromSetup(runInTerminal: true);
         }
         else if (backBounds.Contains(mouse.Position))
         {
@@ -236,6 +349,19 @@ public partial class Game1
 
         DrawBitmapFontText(GetHostSetupTitle(), new Vector2(panel.X + 28f, panel.Y + 22f), Color.White, 1f);
         DrawBitmapFontText(GetHostSetupSubtitle(), new Vector2(panel.X + 28f, panel.Y + 50f), new Color(200, 200, 200), 0.9f);
+
+        if (IsServerLauncherMode)
+        {
+            GetServerLauncherTabBounds(panel, out var settingsTabBounds, out var consoleTabBounds);
+            DrawMenuButton(settingsTabBounds, "Settings", _hostSetupTab == HostSetupTab.Settings);
+            DrawMenuButton(consoleTabBounds, "Server Console", _hostSetupTab == HostSetupTab.ServerConsole);
+        }
+
+        if (IsServerLauncherMode && _hostSetupTab == HostSetupTab.ServerConsole)
+        {
+            DrawHostedServerConsoleTab(panel);
+            return;
+        }
 
         DrawBitmapFontText("Stock Map Rotation", new Vector2(listBounds.X, listBounds.Y - 24f), Color.White, 0.95f);
         DrawBitmapFontText("ORDER", new Vector2(listBounds.X + 10f, listBounds.Y - 2f), new Color(210, 210, 210), 0.8f);
@@ -320,13 +446,17 @@ public partial class Game1
         DrawMenuButton(lobbyBounds, _hostLobbyAnnounceEnabled ? "Lobby Announce: On" : "Lobby Announce: Off", _hostLobbyAnnounceEnabled);
         DrawMenuButton(autoBalanceBounds, _hostAutoBalanceEnabled ? "Auto-balance: On" : "Auto-balance: Off", _hostAutoBalanceEnabled);
 
-        DrawMenuButton(hostBounds, GetHostSetupPrimaryButtonLabel(), IsServerLauncherMode && IsHostedServerRunning);
+        DrawMenuButton(hostBounds, GetHostSetupPrimaryButtonLabel(), false);
         DrawMenuButton(backBounds, GetHostSetupSecondaryButtonLabel(), IsServerLauncherMode && IsHostedServerRunning);
+        if (IsServerLauncherMode && !IsHostedServerRunning)
+        {
+            DrawMenuButton(GetHostSetupTerminalButtonBounds(panel), "Run In Terminal", false);
+        }
 
         if (IsServerLauncherMode && IsHostedServerRunning)
         {
             DrawBitmapFontText(
-                "Changes take effect when you restart the server.",
+                "Use Stop Server to end the active dedicated server session.",
                 new Vector2(panel.X + 28f, panel.Bottom - 62f),
                 new Color(210, 210, 210),
                 0.85f);
@@ -336,6 +466,164 @@ public partial class Game1
         {
             DrawBitmapFontText(_menuStatusMessage, new Vector2(panel.X + 28f, panel.Bottom - 38f), new Color(230, 220, 180), 1f);
         }
+    }
+
+    private void DrawHostedServerConsoleTab(Rectangle panel)
+    {
+        GetHostedServerConsoleLayout(
+            panel,
+            out var logBounds,
+            out var summaryBounds,
+            out var commandBounds,
+            out var sendBounds,
+            out var clearBounds,
+            out var statusCommandBounds,
+            out var playersCommandBounds,
+            out var rotationCommandBounds,
+            out var helpCommandBounds,
+            out var hostBounds,
+            out var backBounds);
+
+        _spriteBatch.Draw(_pixel, logBounds, new Color(24, 25, 30, 230));
+        _spriteBatch.Draw(_pixel, summaryBounds, new Color(28, 30, 34, 230));
+        DrawBitmapFontText("Recent Output", new Vector2(logBounds.X + 10f, logBounds.Y + 8f), Color.White, 0.95f);
+        DrawBitmapFontText("Live Status", new Vector2(summaryBounds.X + 10f, summaryBounds.Y + 8f), Color.White, 0.95f);
+
+        var consoleLines = GetHostedServerConsoleLinesSnapshot();
+        var availableLineCount = Math.Max(1, (logBounds.Height - 38) / 18);
+        var firstLineIndex = Math.Max(0, consoleLines.Count - availableLineCount);
+        var drawY = logBounds.Y + 30f;
+        if (consoleLines.Count == 0)
+        {
+            _spriteBatch.DrawString(_consoleFont, "No server output yet.", new Vector2(logBounds.X + 12f, drawY), new Color(200, 200, 200));
+        }
+        else
+        {
+            for (var index = firstLineIndex; index < consoleLines.Count; index += 1)
+            {
+                var line = TrimConsoleText(consoleLines[index], logBounds.Width - 24f);
+                _spriteBatch.DrawString(_consoleFont, line, new Vector2(logBounds.X + 12f, drawY), new Color(230, 232, 235));
+                drawY += 18f;
+            }
+        }
+
+        var summaryRows = new (string Label, string Value)[]
+        {
+            ("Server", _hostedServerStatusName),
+            ("Port", _hostedServerStatusPort),
+            ("Players", _hostedServerStatusPlayers),
+            ("Lobby", _hostedServerStatusLobby),
+            ("Map", _hostedServerStatusMap),
+            ("Rules", _hostedServerStatusRules),
+            ("Runtime", _hostedServerStatusRuntime),
+            ("World", _hostedServerStatusWorld),
+        };
+
+        for (var index = 0; index < summaryRows.Length; index += 1)
+        {
+            var rowBounds = new Rectangle(summaryBounds.X + 10, summaryBounds.Y + 32 + (index * 45), summaryBounds.Width - 20, 40);
+            DrawHostedServerSummaryRow(rowBounds, summaryRows[index].Label, summaryRows[index].Value);
+        }
+
+        DrawBitmapFontText("Console Command", new Vector2(commandBounds.X, commandBounds.Y - 20f), new Color(210, 210, 210), 0.9f);
+        DrawMenuInputBox(commandBounds, _hostedServerCommandInput, _hostSetupEditField == HostSetupEditField.ServerConsoleCommand);
+        DrawMenuButton(sendBounds, "Send", false);
+        DrawMenuButton(clearBounds, "Clear", false);
+        DrawMenuButton(statusCommandBounds, "Status", false);
+        DrawMenuButton(playersCommandBounds, "Players", false);
+        DrawMenuButton(rotationCommandBounds, "Rotation", false);
+        DrawMenuButton(helpCommandBounds, "Help", false);
+        DrawMenuButton(hostBounds, GetHostSetupPrimaryButtonLabel(), false);
+        DrawMenuButton(backBounds, GetHostSetupSecondaryButtonLabel(), IsServerLauncherMode && IsHostedServerRunning);
+        if (!IsHostedServerRunning)
+        {
+            DrawMenuButton(GetHostSetupTerminalButtonBounds(panel), "Run In Terminal", false);
+        }
+
+        DrawBitmapFontText(
+            "Use Enter or Send to dispatch a server command to the dedicated process.",
+            new Vector2(panel.X + 28f, panel.Bottom - 90f),
+            new Color(210, 210, 210),
+            0.82f);
+
+        if (!string.IsNullOrWhiteSpace(_menuStatusMessage))
+        {
+            DrawBitmapFontText(_menuStatusMessage, new Vector2(panel.X + 28f, panel.Bottom - 38f), new Color(230, 220, 180), 1f);
+        }
+    }
+
+    private void DrawHostedServerSummaryRow(Rectangle bounds, string label, string value)
+    {
+        _spriteBatch.Draw(_pixel, bounds, new Color(44, 46, 52, 180));
+        DrawBitmapFontText(label.ToUpperInvariant(), new Vector2(bounds.X + 8f, bounds.Y + 6f), new Color(210, 210, 210), 0.82f);
+        _spriteBatch.DrawString(_consoleFont, TrimConsoleText(value, bounds.Width - 16f), new Vector2(bounds.X + 10f, bounds.Y + 20f), Color.White);
+    }
+
+    private void ExecuteHostedServerCommandFromUi(string command)
+    {
+        if (TrySendHostedServerCommand(command, out var error))
+        {
+            _menuStatusMessage = "Command sent.";
+        }
+        else
+        {
+            _menuStatusMessage = error;
+        }
+    }
+
+    private string TrimConsoleText(string text, float maxWidth)
+    {
+        if (string.IsNullOrEmpty(text) || _consoleFont.MeasureString(text).X <= maxWidth)
+        {
+            return text;
+        }
+
+        const string ellipsis = "...";
+        var trimmed = text;
+        while (trimmed.Length > 0 && _consoleFont.MeasureString(trimmed + ellipsis).X > maxWidth)
+        {
+            trimmed = trimmed[..^1];
+        }
+
+        return trimmed.Length == 0 ? ellipsis : trimmed + ellipsis;
+    }
+
+    private static void GetServerLauncherTabBounds(Rectangle panel, out Rectangle settingsTabBounds, out Rectangle consoleTabBounds)
+    {
+        settingsTabBounds = new Rectangle(panel.Right - 332, panel.Y + 18, 146, 32);
+        consoleTabBounds = new Rectangle(panel.Right - 176, panel.Y + 18, 146, 32);
+    }
+
+    private static void GetHostedServerConsoleLayout(
+        Rectangle panel,
+        out Rectangle logBounds,
+        out Rectangle summaryBounds,
+        out Rectangle commandBounds,
+        out Rectangle sendBounds,
+        out Rectangle clearBounds,
+        out Rectangle statusCommandBounds,
+        out Rectangle playersCommandBounds,
+        out Rectangle rotationCommandBounds,
+        out Rectangle helpCommandBounds,
+        out Rectangle hostBounds,
+        out Rectangle backBounds)
+    {
+        logBounds = new Rectangle(panel.X + 28, panel.Y + 96, 574, 410);
+        summaryBounds = new Rectangle(logBounds.Right + 18, logBounds.Y, panel.Right - logBounds.Right - 46, 410);
+        commandBounds = new Rectangle(logBounds.X, logBounds.Bottom + 18, 390, 34);
+        sendBounds = new Rectangle(commandBounds.Right + 12, commandBounds.Y, 78, 34);
+        clearBounds = new Rectangle(sendBounds.Right + 10, commandBounds.Y, 78, 34);
+        statusCommandBounds = new Rectangle(summaryBounds.X, summaryBounds.Bottom + 18, 64, 34);
+        playersCommandBounds = new Rectangle(statusCommandBounds.Right + 8, statusCommandBounds.Y, 72, 34);
+        rotationCommandBounds = new Rectangle(playersCommandBounds.Right + 8, statusCommandBounds.Y, 78, 34);
+        helpCommandBounds = new Rectangle(rotationCommandBounds.Right + 8, statusCommandBounds.Y, 60, 34);
+        hostBounds = new Rectangle(panel.Right - 330, panel.Bottom - 62, 140, 42);
+        backBounds = new Rectangle(panel.Right - 170, panel.Bottom - 62, 140, 42);
+    }
+
+    private static Rectangle GetHostSetupTerminalButtonBounds(Rectangle panel)
+    {
+        return new Rectangle(panel.Right - 500, panel.Bottom - 62, 150, 42);
     }
 
     private static void GetHostSetupLayout(
@@ -386,7 +674,7 @@ public partial class Game1
         backBounds = new Rectangle(panel.Right - 170, panel.Bottom - 62, 140, 42);
     }
 
-    private void TryHostFromSetup()
+    private void TryHostFromSetup(bool runInTerminal = false)
     {
         var trimmedRotationFile = _hostMapRotationFileBuffer.Trim();
         if (_hostMapEntries.Count == 0)
@@ -450,16 +738,32 @@ public partial class Game1
         PersistClientSettings();
         if (IsServerLauncherMode)
         {
-            BeginDedicatedServerLaunch(
-                serverName,
-                port,
-                maxPlayers,
-                _hostPasswordBuffer.Trim(),
-                timeLimitMinutes,
-                capLimit,
-                respawnSeconds,
-                _hostLobbyAnnounceEnabled,
-                _hostAutoBalanceEnabled);
+            if (runInTerminal)
+            {
+                BeginDedicatedServerTerminalLaunch(
+                    serverName,
+                    port,
+                    maxPlayers,
+                    _hostPasswordBuffer.Trim(),
+                    timeLimitMinutes,
+                    capLimit,
+                    respawnSeconds,
+                    _hostLobbyAnnounceEnabled,
+                    _hostAutoBalanceEnabled);
+            }
+            else
+            {
+                BeginDedicatedServerLaunch(
+                    serverName,
+                    port,
+                    maxPlayers,
+                    _hostPasswordBuffer.Trim(),
+                    timeLimitMinutes,
+                    capLimit,
+                    respawnSeconds,
+                    _hostLobbyAnnounceEnabled,
+                    _hostAutoBalanceEnabled);
+            }
             return;
         }
 

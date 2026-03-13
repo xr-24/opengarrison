@@ -1,0 +1,316 @@
+[2026-03-12 21:53:41] [launcher] Start Server pressed for UDP port 8192.
+[2026-03-12 21:53:42] [launcher] Starting C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\GG2.Server.exe --config "C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\config\gg2.ini" --port 8192 --name "My Server" --max-players 10 --time-limit 15 --cap-limit 5 --respawn-seconds 5 --lobby --auto-balance
+[2026-03-12 21:53:42] [server] GG2.Server booting at 30 ticks/sec.
+[2026-03-12 21:53:42] [server] Protocol version: 16
+[2026-03-12 21:53:42] [server] UDP bind: 0.0.0.0:8192
+[2026-03-12 21:53:42] [server] Name: My Server
+[2026-03-12 21:53:42] [server] Max players: 10
+[2026-03-12 21:53:42] [server] Time limit: 15 minutes
+[2026-03-12 21:53:42] [server] Cap limit: 5
+[2026-03-12 21:53:42] [server] Respawn: 5 seconds
+[2026-03-12 21:53:42] [server] Auto-balance: Enabled
+[2026-03-12 21:53:42] [server] Level: Truefort area=1/1 imported=True mode=CaptureTheFlag
+[2026-03-12 21:53:42] [server] World bounds: 5346x1080
+[2026-03-12 21:53:42] [server] [server] no password set
+[2026-03-12 21:53:42] [server] [server] lobby registration enabled host=gg2.game-host.org:29942
+[2026-03-12 21:53:42] [server] [server] type "help" for commands. Type "shutdown" to stop.
+[2026-03-12 21:53:42] [server] [server] status | name=My Server | port=8192 | players=0/10 | spectators=0 | map=Truefort area=1/1 | mode=CaptureTheFlag | phase=Running | score=0-0 | lobby=enabled gg2.game-host.org:29942 | password=off | uptime=00:00
+[2026-03-12 21:53:42] [server] [server] rules | timeLimit=15 | capLimit=5 | respawn=5 | autoBalance=enabled
+[2026-03-12 21:53:42] [server] [server] lobby | enabled=enabled | host=gg2.game-host.org | port=29942
+[2026-03-12 21:53:42] [server] [server] map | name=Truefort | area=1/1 | mode=CaptureTheFlag | phase=Running | winner=none | imported=True
+[2026-03-12 21:53:42] [server] [server] world | bounds=5346x1080
+[2026-03-12 21:53:42] [server] [server] rotation | source=stock | current=1/11 | entries=Truefort, TwodFortTwo, Conflict, ClassicWell, Waterway, Orange, Dirtbowl, Egypt, Montane, Lumberyard, Destroy
+[2026-03-12 21:53:42] [server] Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.
+[2026-03-12 21:53:43] [server] [server] frame=30 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:44] [server] [server] frame=60 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:45] [server] [server] frame=90 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:46] [server] [server] frame=120 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:47] [server] [server] frame=150 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:48] [server] [server] frame=180 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:49] [server] [server] frame=210 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:50] [server] [server] frame=240 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:51] [server] [server] frame=270 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:52] [server] [server] frame=300 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:53] [server] [server] frame=330 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:54] [server] [server] frame=360 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:55] [server] [server] frame=390 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:56] [server] [server] frame=420 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:57] [server] [server] frame=450 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:58] [server] [server] frame=480 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:53:59] [server] [server] frame=510 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:00] [server] [server] frame=540 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:01] [server] [server] frame=570 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:02] [server] [server] frame=600 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:03] [server] [server] frame=630 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:04] [server] [server] frame=660 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:05] [server] [server] frame=690 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:06] [server] [server] frame=720 clients=0 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:54:06] [launcher] Back action requested while dedicated server was running.
+[2026-03-12 21:54:06] [launcher] Stop requested for hosted server.
+[2026-03-12 21:54:06] [server] [server] shutdown requested.
+[2026-03-12 21:54:06] [server] [server] shutdown complete.
+[2026-03-12 21:54:06] [launcher] Server process exited with code 0.
+[2026-03-12 21:54:08] [launcher] Back action requested with no running server; exiting launcher.
+[2026-03-12 21:58:54] [launcher] Starting C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\GG2.Server.exe --config "C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\config\gg2.ini" --port 8192 --name "My Server" --max-players 10 --time-limit 15 --cap-limit 5 --respawn-seconds 5 --lobby --auto-balance
+[2026-03-12 21:58:55] [server] GG2.Server booting at 30 ticks/sec.
+[2026-03-12 21:58:55] [server] Protocol version: 16
+[2026-03-12 21:58:55] [server] UDP bind: 0.0.0.0:8192
+[2026-03-12 21:58:55] [server] Name: My Server
+[2026-03-12 21:58:55] [server] Max players: 10
+[2026-03-12 21:58:55] [server] Time limit: 15 minutes
+[2026-03-12 21:58:55] [server] Cap limit: 5
+[2026-03-12 21:58:55] [server] Respawn: 5 seconds
+[2026-03-12 21:58:55] [server] Auto-balance: Enabled
+[2026-03-12 21:58:55] [server] Level: Truefort area=1/1 imported=True mode=CaptureTheFlag
+[2026-03-12 21:58:55] [server] World bounds: 5346x1080
+[2026-03-12 21:58:55] [server] [server] no password set
+[2026-03-12 21:58:55] [server] [server] lobby registration enabled host=gg2.game-host.org:29942
+[2026-03-12 21:58:55] [server] [server] type "help" for commands. Type "shutdown" to stop.
+[2026-03-12 21:58:55] [server] [server] status | name=My Server | port=8192 | players=0/10 | spectators=0 | map=Truefort area=1/1 | mode=CaptureTheFlag | phase=Running | score=0-0 | lobby=enabled gg2.game-host.org:29942 | password=off | uptime=00:00
+[2026-03-12 21:58:55] [server] [server] rules | timeLimit=15 | capLimit=5 | respawn=5 | autoBalance=enabled
+[2026-03-12 21:58:55] [server] [server] lobby | enabled=enabled | host=gg2.game-host.org | port=29942
+[2026-03-12 21:58:55] [server] [server] map | name=Truefort | area=1/1 | mode=CaptureTheFlag | phase=Running | winner=none | imported=True
+[2026-03-12 21:58:55] [server] [server] world | bounds=5346x1080
+[2026-03-12 21:58:55] [server] [server] rotation | source=stock | current=1/11 | entries=Truefort, TwodFortTwo, Conflict, ClassicWell, Waterway, Orange, Dirtbowl, Egypt, Montane, Lumberyard, Destroy
+[2026-03-12 21:58:55] [server] Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.
+[2026-03-12 21:58:55] [server] [server] client connected 127.0.0.1:57465 slot=1 name="Player" version=16
+[2026-03-12 21:58:56] [server] [server] frame=30 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:58:57] [server] [server] frame=60 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 21:58:58] [server] [server] frame=90 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=3/4 pos=(1661.1,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:58:59] [server] [server] frame=120 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:00] [server] [server] frame=150 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:01] [server] [server] frame=180 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:01] [server] [chat] Player: uy
+[2026-03-12 21:59:02] [server] [server] frame=210 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:03] [server] [server] frame=240 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:04] [server] [server] frame=270 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:05] [server] [server] frame=300 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:06] [server] [server] frame=330 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:06] [server] [chat] Player: ytpenis
+[2026-03-12 21:59:07] [server] [server] frame=360 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:08] [server] [chat] Player: o
+[2026-03-12 21:59:08] [server] [server] frame=390 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:09] [server] [server] frame=420 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:10] [server] [server] frame=450 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:11] [server] [server] frame=480 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:11] [server] [chat] Player: tanus
+[2026-03-12 21:59:12] [server] [server] frame=510 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:13] [server] [server] frame=540 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:14] [server] [chat] Player: aadAD
+[2026-03-12 21:59:14] [server] [server] frame=570 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:15] [server] [chat] Player: AWD
+[2026-03-12 21:59:15] [server] [server] frame=600 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:15] [server] [chat] Player: AWD
+[2026-03-12 21:59:16] [server] [chat] Player: AWD
+[2026-03-12 21:59:16] [server] [chat] Player: AW
+[2026-03-12 21:59:16] [server] [chat] Player: D
+[2026-03-12 21:59:16] [server] [server] frame=630 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:17] [server] [server] frame=660 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:18] [server] [chat] Player: WEFI CANT
+[2026-03-12 21:59:18] [server] [server] frame=690 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:19] [server] [chat] Player: T
+[2026-03-12 21:59:19] [server] [server] frame=720 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:20] [server] [server] frame=750 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:21] [server] [server] frame=780 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:21] [server] [chat] Player: I CANT U
+[2026-03-12 21:59:22] [server] [server] frame=810 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:23] [server] [server] frame=840 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:23] [server] [chat] Player: I CANT ESCAPE
+[2026-03-12 21:59:24] [server] [server] frame=870 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:24] [server] [chat] Player: FUCK
+[2026-03-12 21:59:25] [server] [server] frame=900 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:26] [server] [chat] Player: HELP
+[2026-03-12 21:59:26] [server] [server] frame=930 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:27] [server] [server] frame=960 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:28] [server] [server] frame=990 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:29] [server] [server] frame=1020 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:30] [server] [server] frame=1050 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:31] [server] [server] frame=1080 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:32] [server] [server] frame=1110 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:33] [server] [server] frame=1140 clients=1 mode=CaptureTheFlag phase=Running hp=161/175 ammo=4/4 pos=(1650.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 21:59:33] [launcher] Stop requested for hosted server.
+[2026-03-12 21:59:33] [server] [server] shutdown requested.
+[2026-03-12 21:59:33] [server] [server] shutdown complete.
+[2026-03-12 21:59:34] [launcher] Server process exited with code 0.
+[2026-03-12 22:04:48] [launcher] Starting C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\GG2.Server.exe --config "C:\Users\level\Desktop\ogg2\Source\GG2.CSharp\dist\opengarrison-win-x64\config\gg2.ini" --port 8192 --name "My Server" --max-players 10 --time-limit 15 --cap-limit 5 --respawn-seconds 5 --lobby --auto-balance
+[2026-03-12 22:04:51] [server] GG2.Server booting at 30 ticks/sec.
+[2026-03-12 22:04:51] [server] Protocol version: 16
+[2026-03-12 22:04:51] [server] UDP bind: 0.0.0.0:8192
+[2026-03-12 22:04:51] [server] Name: My Server
+[2026-03-12 22:04:51] [server] Max players: 10
+[2026-03-12 22:04:51] [server] Time limit: 15 minutes
+[2026-03-12 22:04:51] [server] Cap limit: 5
+[2026-03-12 22:04:51] [server] Respawn: 5 seconds
+[2026-03-12 22:04:51] [server] Auto-balance: Enabled
+[2026-03-12 22:04:51] [server] Level: Truefort area=1/1 imported=True mode=CaptureTheFlag
+[2026-03-12 22:04:51] [server] World bounds: 5346x1080
+[2026-03-12 22:04:51] [server] [server] no password set
+[2026-03-12 22:04:51] [server] [server] lobby registration enabled host=gg2.game-host.org:29942
+[2026-03-12 22:04:51] [server] [server] type "help" for commands. Type "shutdown" to stop.
+[2026-03-12 22:04:51] [server] [server] status | name=My Server | port=8192 | players=0/10 | spectators=0 | map=Truefort area=1/1 | mode=CaptureTheFlag | phase=Running | score=0-0 | lobby=enabled gg2.game-host.org:29942 | password=off | uptime=00:00
+[2026-03-12 22:04:51] [server] [server] rules | timeLimit=15 | capLimit=5 | respawn=5 | autoBalance=enabled
+[2026-03-12 22:04:51] [server] [server] lobby | enabled=enabled | host=gg2.game-host.org | port=29942
+[2026-03-12 22:04:51] [server] [server] map | name=Truefort | area=1/1 | mode=CaptureTheFlag | phase=Running | winner=none | imported=True
+[2026-03-12 22:04:51] [server] [server] world | bounds=5346x1080
+[2026-03-12 22:04:51] [server] [server] rotation | source=stock | current=1/11 | entries=Truefort, TwodFortTwo, Conflict, ClassicWell, Waterway, Orange, Dirtbowl, Egypt, Montane, Lumberyard, Destroy
+[2026-03-12 22:04:51] [server] Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.
+[2026-03-12 22:04:51] [server] [server] client connected 127.0.0.1:58779 slot=1 name="Player" version=16
+[2026-03-12 22:04:52] [server] [server] frame=30 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 22:04:53] [server] [server] frame=60 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 22:04:54] [server] [server] frame=90 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 22:04:55] [server] [server] frame=120 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 22:04:56] [server] [server] frame=150 clients=1 mode=CaptureTheFlag phase=Running hp=0/100 ammo=6/6 pos=(1632.0,456.0) activePlayable=0 spectators=0 caps=0-0
+[2026-03-12 22:04:57] [server] [server] frame=180 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=3/4 pos=(3726.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:04:58] [server] [server] frame=210 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3726.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:04:59] [server] [server] frame=240 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3653.3,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:00] [server] [server] frame=270 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3574.9,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:01] [server] [server] frame=300 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:02] [server] [server] frame=330 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:03] [server] [server] frame=360 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:04] [server] [server] frame=390 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:05] [server] [server] frame=420 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:06] [server] [server] frame=450 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:07] [server] [server] frame=480 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:08] [server] [server] frame=510 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:09] [server] [server] frame=540 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:10] [server] [server] frame=570 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:11] [server] [server] frame=600 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:12] [server] [server] frame=630 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:13] [server] [server] frame=660 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:14] [server] [server] frame=690 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:15] [server] [server] frame=720 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:16] [server] [server] frame=750 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(3596.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:17] [server] [server] frame=780 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3702.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:18] [server] [server] frame=810 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3706.3,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:19] [server] [server] frame=840 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=87/100 pos=(3709.5,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:20] [server] [server] frame=870 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=97/100 pos=(3889.0,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:21] [server] [server] frame=900 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=91/100 pos=(3915.1,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:22] [server] [server] frame=930 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=95/100 pos=(4008.0,407.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:23] [server] [server] frame=960 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=96/100 pos=(4200.6,403.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:24] [server] [server] frame=990 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4229.4,500.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:25] [server] [server] frame=1020 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=88/100 pos=(4365.8,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:27] [server] [server] frame=1080 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4324.3,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:28] [server] [server] frame=1110 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=92/100 pos=(4244.8,588.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:29] [server] [server] frame=1140 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4058.4,563.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:31] [server] [server] frame=1200 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3909.3,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:32] [server] [server] frame=1230 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3719.5,672.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:33] [server] [server] frame=1260 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3834.2,662.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:34] [server] [server] frame=1290 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4026.8,559.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:35] [server] [server] frame=1320 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4219.4,617.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:36] [server] [server] frame=1350 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4247.3,487.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:37] [server] [server] frame=1380 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4054.7,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:38] [server] [server] frame=1410 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3862.1,462.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:39] [server] [server] frame=1440 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3669.5,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:40] [server] [server] frame=1470 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3611.0,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:41] [server] [server] frame=1500 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3683.9,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:42] [server] [server] frame=1530 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3666.5,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:43] [server] [server] frame=1560 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3708.0,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:44] [server] [server] frame=1590 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3698.9,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:45] [server] [server] frame=1620 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:46] [server] [server] frame=1650 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:47] [server] [server] frame=1680 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:48] [server] [server] frame=1710 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:49] [server] [server] frame=1740 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:50] [server] [server] frame=1770 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3695.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:51] [server] [server] frame=1800 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3679.3,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:52] [server] [server] frame=1830 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3690.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:53] [server] [server] frame=1860 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3690.2,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:54] [server] [server] frame=1890 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=3/4 pos=(1656.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:55] [server] [server] frame=1920 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1656.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:56] [server] [server] frame=1950 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1656.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:57] [server] [server] frame=1980 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1656.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:58] [server] [server] frame=2010 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1656.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:05:59] [server] [server] frame=2040 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(1680.0,479.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:00] [server] [server] frame=2070 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(1771.9,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:01] [server] [server] frame=2100 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=90/100 pos=(1871.4,480.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:02] [server] [server] frame=2130 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(2034.0,456.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:03] [server] [server] frame=2160 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=87/100 pos=(2198.1,498.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:04] [server] [server] frame=2190 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=97/100 pos=(2332.5,431.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:05] [server] [server] frame=2220 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(2332.5,449.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:06] [server] [server] frame=2250 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(2373.9,454.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:07] [server] [server] frame=2280 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=91/100 pos=(2518.2,774.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:08] [server] [server] frame=2310 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=76/100 pos=(2516.9,774.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:09] [server] [server] frame=2340 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=91/100 pos=(2580.4,714.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:10] [server] [server] frame=2370 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=90/100 pos=(2773.0,714.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:11] [server] [server] frame=2400 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(2965.6,708.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:12] [server] [server] frame=2430 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3157.3,651.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:13] [server] [server] frame=2460 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3289.8,640.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:14] [server] [server] frame=2490 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3482.4,732.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:15] [server] [server] frame=2520 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3664.6,644.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:16] [server] [server] frame=2550 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3857.2,654.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:17] [server] [server] frame=2580 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3886.4,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:18] [server] [server] frame=2610 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3851.1,654.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:21] [server] [server] frame=2700 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3846.5,660.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:22] [server] [server] frame=2730 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3775.5,671.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:23] [server] [server] frame=2760 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3878.2,630.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:24] [server] [server] frame=2790 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=91/100 pos=(3857.2,641.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:25] [server] [server] frame=2820 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=87/100 pos=(3836.8,671.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:26] [server] [server] frame=2850 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=91/100 pos=(4029.4,563.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:27] [server] [server] frame=2880 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4222.0,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:28] [server] [server] frame=2910 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4250.6,584.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:29] [server] [server] frame=2940 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4239.3,587.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:30] [server] [server] frame=2970 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=90/100 pos=(4047.3,561.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:31] [server] [server] frame=3000 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4003.6,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:32] [server] [server] frame=3030 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:33] [server] [server] frame=3060 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:34] [server] [server] frame=3090 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:35] [server] [server] frame=3120 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:36] [server] [server] frame=3150 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:37] [server] [chat] Player: enter penis
+[2026-03-12 22:06:37] [server] [server] frame=3180 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:38] [server] [server] frame=3210 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:39] [server] [server] frame=3240 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:41] [server] [server] frame=3300 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:42] [server] [server] frame=3330 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:43] [server] [server] frame=3360 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:44] [server] [chat] Player: oh you just press esc i see
+[2026-03-12 22:06:44] [server] [server] frame=3390 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:45] [server] [server] frame=3420 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4022.7,581.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:46] [server] [server] frame=3450 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3933.8,617.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:47] [server] [server] frame=3480 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(3896.7,617.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:48] [server] [server] frame=3510 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4034.0,570.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:49] [server] [server] frame=3540 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=90/100 pos=(4164.9,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:50] [server] [server] frame=3570 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=90/100 pos=(4288.0,497.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:51] [server] [server] frame=3600 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4150.6,455.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:52] [server] [server] frame=3630 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4169.7,509.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:53] [server] [server] frame=3660 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4169.7,509.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:54] [server] [server] frame=3690 clients=1 mode=CaptureTheFlag phase=Running hp=140/140 ammo=100/100 pos=(4169.7,509.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:55] [server] [server] frame=3720 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1749.7,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:56] [server] [server] frame=3750 clients=1 mode=CaptureTheFlag phase=Running hp=175/175 ammo=4/4 pos=(1856.1,479.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:57] [server] [server] frame=3780 clients=1 mode=CaptureTheFlag phase=Running hp=154/175 ammo=3/4 pos=(2012.9,429.7) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:58] [server] [server] frame=3810 clients=1 mode=CaptureTheFlag phase=Running hp=154/175 ammo=4/4 pos=(2130.0,464.1) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:06:59] [server] [server] frame=3840 clients=1 mode=CaptureTheFlag phase=Running hp=133/175 ammo=3/4 pos=(2251.8,466.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:00] [server] [server] frame=3870 clients=1 mode=CaptureTheFlag phase=Running hp=133/175 ammo=4/4 pos=(2359.5,461.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:01] [server] [server] frame=3900 clients=1 mode=CaptureTheFlag phase=Running hp=118/175 ammo=3/4 pos=(2438.1,303.1) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:02] [server] [server] frame=3930 clients=1 mode=CaptureTheFlag phase=Running hp=118/175 ammo=3/4 pos=(2600.1,587.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:03] [server] [server] frame=3960 clients=1 mode=CaptureTheFlag phase=Running hp=118/175 ammo=3/4 pos=(2762.1,587.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:04] [server] [server] frame=3990 clients=1 mode=CaptureTheFlag phase=Running hp=118/175 ammo=3/4 pos=(2924.1,581.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:05] [server] [server] frame=4020 clients=1 mode=CaptureTheFlag phase=Running hp=114/175 ammo=4/4 pos=(3084.9,690.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:06] [server] [server] frame=4050 clients=1 mode=CaptureTheFlag phase=Running hp=110/175 ammo=3/4 pos=(3246.5,653.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:07] [server] [server] frame=4080 clients=1 mode=CaptureTheFlag phase=Running hp=110/175 ammo=3/4 pos=(3408.5,638.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:08] [server] [server] frame=4110 clients=1 mode=CaptureTheFlag phase=Running hp=110/175 ammo=4/4 pos=(3570.5,708.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:09] [server] [server] frame=4140 clients=1 mode=CaptureTheFlag phase=Running hp=92/175 ammo=3/4 pos=(3728.5,672.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:10] [server] [server] frame=4170 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=3/4 pos=(3890.5,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:11] [server] [server] frame=4200 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=4/4 pos=(3957.2,618.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:12] [server] [server] frame=4230 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=4/4 pos=(3846.2,660.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:13] [server] [server] frame=4260 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=4/4 pos=(3740.6,671.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:14] [server] [server] frame=4290 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=4/4 pos=(3707.5,671.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:15] [server] [server] frame=4320 clients=1 mode=CaptureTheFlag phase=Running hp=78/175 ammo=4/4 pos=(3744.0,671.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:16] [server] [server] frame=4350 clients=1 mode=CaptureTheFlag phase=Running hp=58/175 ammo=4/4 pos=(3631.6,701.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:17] [server] [server] frame=4380 clients=1 mode=CaptureTheFlag phase=Running hp=58/175 ammo=4/4 pos=(3767.6,749.9) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:18] [server] [server] frame=4410 clients=1 mode=CaptureTheFlag phase=Running hp=58/175 ammo=4/4 pos=(3646.8,702.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:19] [server] [server] frame=4440 clients=1 mode=CaptureTheFlag phase=Running hp=58/175 ammo=4/4 pos=(3539.7,737.8) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:20] [server] [server] frame=4470 clients=1 mode=CaptureTheFlag phase=Running hp=58/175 ammo=4/4 pos=(3549.1,732.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:21] [server] [server] frame=4500 clients=1 mode=CaptureTheFlag phase=Running hp=46/175 ammo=3/4 pos=(3701.7,749.5) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:22] [server] [server] frame=4530 clients=1 mode=CaptureTheFlag phase=Running hp=27/175 ammo=3/4 pos=(3680.9,627.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:23] [server] [server] frame=4560 clients=1 mode=CaptureTheFlag phase=Running hp=27/175 ammo=4/4 pos=(3842.9,666.0) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:24] [server] [server] frame=4590 clients=1 mode=CaptureTheFlag phase=Running hp=7/175 ammo=3/4 pos=(4004.9,487.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:25] [server] [server] frame=4620 clients=1 mode=CaptureTheFlag phase=Running hp=7/175 ammo=4/4 pos=(4127.6,464.3) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:26] [server] [server] frame=4650 clients=1 mode=CaptureTheFlag phase=Running hp=0/175 ammo=3/4 pos=(4131.0,473.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:27] [server] [server] frame=4680 clients=1 mode=CaptureTheFlag phase=Running hp=0/175 ammo=3/4 pos=(4131.0,473.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:28] [server] [server] frame=4710 clients=1 mode=CaptureTheFlag phase=Running hp=0/175 ammo=3/4 pos=(4131.0,473.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:29] [server] [server] frame=4740 clients=1 mode=CaptureTheFlag phase=Running hp=0/175 ammo=3/4 pos=(4131.0,473.6) activePlayable=1 spectators=0 caps=0-0
+[2026-03-12 22:07:30] [launcher] Stop requested for hosted server.
+[2026-03-12 22:07:30] [server] [server] shutdown requested.
+[2026-03-12 22:07:30] [server] [server] shutdown complete.
+[2026-03-12 22:07:30] [launcher] Server process exited with code 0.
