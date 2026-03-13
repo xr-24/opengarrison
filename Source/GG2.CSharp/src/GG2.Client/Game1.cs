@@ -177,7 +177,6 @@ public partial class Game1 : Game
     private string _hostedServerStatusRuntime = "No live server output yet.";
     private string _hostedServerStatusWorld = "World bounds unknown";
     private HostedServerSessionInfo? _hostedServerSession;
-    private long _hostedServerLogReadPosition;
     private int _hostedServerStatePollTicks;
     private string _playerNameEditBuffer = string.Empty;
     private string _connectHostBuffer = "127.0.0.1";

@@ -1,3 +1,0 @@
-with(Obstacle)
-    solid = false;
-

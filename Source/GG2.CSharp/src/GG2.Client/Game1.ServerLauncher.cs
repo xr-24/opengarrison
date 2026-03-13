@@ -37,7 +37,7 @@ public partial class Game1
 
     private void InitializeServerLauncherMode()
     {
-        InitializeHostedServerLog(reset: false);
+        InitializeHostedServerConsole(reset: false);
         AppendHostedServerLog("launcher", "GG2.ServerLauncher initialized.");
         _startupSplashOpen = false;
         _mainMenuOpen = true;
@@ -84,7 +84,6 @@ public partial class Game1
             else
             {
                 attachedProcess?.Dispose();
-                PollHostedServerLog();
                 if (_hostedServerStatePollTicks <= 0)
                 {
                     TrySendHostedServerAdminCommand("__snapshot", out var snapshotLines, out _);
@@ -202,7 +201,7 @@ public partial class Game1
         _optionsMenuOpen = false;
         _creditsOpen = false;
         _controlsMenuOpen = false;
-        InitializeHostedServerLog(reset: true);
+        InitializeHostedServerConsole(reset: true);
         PrimeHostedServerConsoleState(
             serverName,
             port,
@@ -253,7 +252,7 @@ public partial class Game1
         _optionsMenuOpen = false;
         _creditsOpen = false;
         _controlsMenuOpen = false;
-        InitializeHostedServerLog(reset: true);
+        InitializeHostedServerConsole(reset: true);
         PrimeHostedServerConsoleState(
             serverName,
             port,

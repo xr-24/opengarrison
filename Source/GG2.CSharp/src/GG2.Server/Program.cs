@@ -18,7 +18,6 @@ const int autoBalanceNewPlayerGraceSeconds = 60;
 var launchOptions = ServerLaunchOptions.Load(args);
 launchOptions.Settings.Save(launchOptions.ResolvedConfigPath);
 var sessionPath = HostedServerSessionInfo.GetDefaultPath();
-var logPath = RuntimePaths.GetConfigPath(HostedServerSessionInfo.DefaultLogFileName);
 var pipeName = $"opengarrison-hosted-server-{Environment.ProcessId}";
 
 var config = new SimulationConfig
@@ -56,16 +55,12 @@ var server = new GameServer(
     transientEventReplayTicks);
 
 using var shutdownCts = new CancellationTokenSource();
-using var consoleLogWriter = new HostedServerConsoleLogWriter(Console.Out, logPath, reset: true);
-Console.SetOut(consoleLogWriter);
-Console.SetError(consoleLogWriter);
 var sessionInfo = new HostedServerSessionInfo
 {
     ProcessId = Environment.ProcessId,
     Port = launchOptions.Port,
     ServerName = launchOptions.ServerName,
     PipeName = pipeName,
-    LogPath = logPath,
     ConfigPath = launchOptions.ResolvedConfigPath,
     WorkingDirectory = Directory.GetCurrentDirectory(),
     LaunchMode = Environment.GetEnvironmentVariable("OPENGARRISON_LAUNCH_MODE") ?? "direct",

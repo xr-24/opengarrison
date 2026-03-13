@@ -1,7 +1,8 @@
 param(
     [string]$Configuration = "Release",
     [string]$OutputRoot = "",
-    [string[]]$Platforms = @("win-x64", "linux-x64", "osx-x64", "osx-arm64")
+    [string[]]$Platforms = @("win-x64", "linux-x64", "osx-x64", "osx-arm64"),
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +10,8 @@ $ErrorActionPreference = "Stop"
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
 $workspaceRoot = Split-Path -Parent (Split-Path -Parent $repoRoot)
+$clientProjectRoot = Join-Path $repoRoot "src\GG2.Client"
+$toolManifestPath = Join-Path $clientProjectRoot ".config\dotnet-tools.json"
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $repoRoot "dist"
 }
@@ -99,11 +102,43 @@ function Copy-MinimalExeAssets {
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 
 $packageArtifacts = @()
+$restorePlatforms = $Platforms | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+if ($restorePlatforms.Count -eq 0) {
+    throw "At least one platform must be specified."
+}
 
 Push-Location $repoRoot
 try {
-    dotnet test GG2.sln -c $Configuration
-    if ($LASTEXITCODE -ne 0) { throw "dotnet test failed." }
+    if (Test-Path $toolManifestPath) {
+        Write-Host "Restoring local dotnet tools from client manifest..."
+        Push-Location $clientProjectRoot
+        try {
+            dotnet tool restore
+            if ($LASTEXITCODE -ne 0) { throw "dotnet tool restore failed." }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    else {
+        Write-Host "No local dotnet tool manifest found; skipping dotnet tool restore."
+    }
+
+    if (-not $SkipTests) {
+        Write-Host "Restoring solution for test run..."
+        dotnet restore GG2.sln
+        if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed." }
+
+        Write-Host "Running release tests..."
+        dotnet test GG2.sln -c $Configuration --no-restore
+        if ($LASTEXITCODE -ne 0) { throw "dotnet test failed." }
+    }
+
+    foreach ($platform in $restorePlatforms) {
+        Write-Host "Restoring solution for runtime $platform..."
+        dotnet restore GG2.sln -r $platform
+        if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $platform." }
+    }
 
     foreach ($platform in $Platforms) {
         $packageName = "opengarrison-$platform"
@@ -119,11 +154,12 @@ try {
         New-Item -ItemType Directory -Path (Join-Path $stagingRoot "config") | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $stagingRoot "Maps") | Out-Null
 
-        dotnet publish .\src\GG2.Client\GG2.Client.csproj -c $Configuration -r $platform --self-contained true -o $stagingRoot
+        Write-Host "Publishing packages for $platform..."
+        dotnet publish .\src\GG2.Client\GG2.Client.csproj -c $Configuration -r $platform --self-contained true --no-restore -o $stagingRoot
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.Client failed on $platform." }
-        dotnet publish .\src\GG2.ServerLauncher\GG2.ServerLauncher.csproj -c $Configuration -r $platform --self-contained true -o $stagingRoot
+        dotnet publish .\src\GG2.ServerLauncher\GG2.ServerLauncher.csproj -c $Configuration -r $platform --self-contained true --no-restore -o $stagingRoot
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.ServerLauncher failed on $platform." }
-        dotnet publish .\src\GG2.Server\GG2.Server.csproj -c $Configuration -r $platform --self-contained true -o $stagingRoot
+        dotnet publish .\src\GG2.Server\GG2.Server.csproj -c $Configuration -r $platform --self-contained true --no-restore -o $stagingRoot
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.Server failed on $platform." }
 
         New-Item -ItemType Directory -Force -Path (Join-Path $stagingRoot "Assets") | Out-Null

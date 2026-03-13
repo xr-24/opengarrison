@@ -7,7 +7,6 @@ namespace GG2.Core;
 public sealed class HostedServerSessionInfo
 {
     public const string DefaultFileName = "hosted-server-session.json";
-    public const string DefaultLogFileName = "hosted-server.log";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -21,8 +20,6 @@ public sealed class HostedServerSessionInfo
     public string ServerName { get; set; } = string.Empty;
 
     public string PipeName { get; set; } = string.Empty;
-
-    public string LogPath { get; set; } = string.Empty;
 
     public string ConfigPath { get; set; } = string.Empty;
 

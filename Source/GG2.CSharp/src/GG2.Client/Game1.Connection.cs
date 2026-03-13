@@ -21,7 +21,6 @@ public partial class Game1
     private int _pendingHostedConnectPort = 8190;
     private Process? _hostedServerProcess;
     private readonly object _hostedServerLogSync = new();
-    private string? _hostedServerLogPath;
     private string? _hostedServerLastOutputLine;
     private string? _recentConnectHost;
     private int _recentConnectPort;
@@ -225,7 +224,7 @@ public partial class Game1
 
         try
         {
-            InitializeHostedServerLog(reset: false);
+            InitializeHostedServerConsole(reset: false);
             _hostedServerLastOutputLine = null;
 
             var arguments = BuildHostedServerLaunchArguments(
@@ -308,7 +307,7 @@ public partial class Game1
         try
         {
             HostedServerSessionInfo.Delete();
-            InitializeHostedServerLog(reset: true);
+            InitializeHostedServerConsole(reset: true);
             var arguments = BuildHostedServerLaunchArguments(
                 serverLaunchTarget,
                 serverName,
@@ -513,18 +512,14 @@ public partial class Game1
         }
     }
 
-    private void InitializeHostedServerLog(bool reset)
+    private void InitializeHostedServerConsole(bool reset)
     {
-        var logPath = RuntimePaths.GetConfigPath("hosted-server.log");
         lock (_hostedServerLogSync)
         {
-            _hostedServerLogPath = logPath;
             if (reset)
             {
                 ResetHostedServerConsoleStateUnsafe();
             }
-
-            _hostedServerLogReadPosition = File.Exists(logPath) ? new FileInfo(logPath).Length : 0L;
         }
     }
 
@@ -544,12 +539,9 @@ public partial class Game1
     private string BuildHostedServerExitMessage()
     {
         var details = string.IsNullOrWhiteSpace(_hostedServerLastOutputLine)
-            ? "See config\\hosted-server.log for details."
+            ? "No additional server output."
             : _hostedServerLastOutputLine;
-
-        return string.IsNullOrWhiteSpace(_hostedServerLogPath)
-            ? $"Dedicated server exited. {details}"
-            : $"Dedicated server exited. {details} Log: {Path.GetFileName(_hostedServerLogPath)}";
+        return $"Dedicated server exited. {details}";
     }
 
     private void PrimeHostedServerConsoleState(
@@ -615,10 +607,6 @@ public partial class Game1
         {
             _hostedServerConsoleLines.Clear();
             _hostedServerLastOutputLine = null;
-            if (!string.IsNullOrWhiteSpace(_hostedServerLogPath) && File.Exists(_hostedServerLogPath))
-            {
-                _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
-            }
         }
     }
 
@@ -634,7 +622,6 @@ public partial class Game1
     {
         _hostedServerConsoleLines.Clear();
         _hostedServerLastOutputLine = null;
-        _hostedServerLogReadPosition = 0L;
         _hostedServerStatusName = "Offline";
         _hostedServerStatusPort = "--";
         _hostedServerStatusPlayers = "0/0";
@@ -838,9 +825,6 @@ public partial class Game1
         }
 
         _hostedServerSession = session;
-        _hostedServerLogPath = string.IsNullOrWhiteSpace(session.LogPath)
-            ? RuntimePaths.GetConfigPath(HostedServerSessionInfo.DefaultLogFileName)
-            : session.LogPath;
         _hostedServerStatusName = string.IsNullOrWhiteSpace(session.ServerName) ? _hostedServerStatusName : session.ServerName;
         _hostedServerStatusPort = session.Port > 0 ? session.Port.ToString(CultureInfo.InvariantCulture) : _hostedServerStatusPort;
 
@@ -848,15 +832,7 @@ public partial class Game1
         {
             return false;
         }
-
-        if (loadExistingLog)
-        {
-            ReloadHostedServerLogSnapshot();
-        }
-        else if (!string.IsNullOrWhiteSpace(_hostedServerLogPath) && File.Exists(_hostedServerLogPath))
-        {
-            _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
-        }
+        _ = loadExistingLog;
 
         TrySendHostedServerAdminCommand("__snapshot", out var snapshotLines, out _);
         lock (_hostedServerLogSync)
@@ -867,109 +843,6 @@ public partial class Game1
             }
         }
 
-        return true;
-    }
-
-    private void PollHostedServerLog()
-    {
-        if (string.IsNullOrWhiteSpace(_hostedServerLogPath) || !File.Exists(_hostedServerLogPath))
-        {
-            return;
-        }
-
-        lock (_hostedServerLogSync)
-        {
-            using var stream = new FileStream(_hostedServerLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            if (stream.Length < _hostedServerLogReadPosition)
-            {
-                _hostedServerLogReadPosition = 0L;
-            }
-
-            if (stream.Length == _hostedServerLogReadPosition)
-            {
-                return;
-            }
-
-            stream.Seek(_hostedServerLogReadPosition, SeekOrigin.Begin);
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-            var text = reader.ReadToEnd();
-            _hostedServerLogReadPosition = stream.Position;
-            ProcessHostedServerLogChunkUnsafe(text);
-        }
-    }
-
-    private void ReloadHostedServerLogSnapshot()
-    {
-        if (string.IsNullOrWhiteSpace(_hostedServerLogPath) || !File.Exists(_hostedServerLogPath))
-        {
-            return;
-        }
-
-        lock (_hostedServerLogSync)
-        {
-            _hostedServerConsoleLines.Clear();
-            _hostedServerLastOutputLine = null;
-            using var stream = new FileStream(_hostedServerLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-            var text = reader.ReadToEnd();
-            ProcessHostedServerLogChunkUnsafe(text);
-            _hostedServerLogReadPosition = new FileInfo(_hostedServerLogPath).Length;
-        }
-    }
-
-    private void ProcessHostedServerLogChunkUnsafe(string text)
-    {
-        using var reader = new StringReader(text);
-        string? rawLine;
-        while ((rawLine = reader.ReadLine()) is not null)
-        {
-            if (string.IsNullOrWhiteSpace(rawLine))
-            {
-                continue;
-            }
-
-            _hostedServerConsoleLines.Add(rawLine);
-            while (_hostedServerConsoleLines.Count > 240)
-            {
-                _hostedServerConsoleLines.RemoveAt(0);
-            }
-
-            if (TrySplitHostedServerLogLine(rawLine, out var source, out var message))
-            {
-                _hostedServerLastOutputLine = message;
-                UpdateHostedServerConsoleStatusUnsafe(source, message);
-            }
-            else
-            {
-                _hostedServerLastOutputLine = rawLine;
-                UpdateHostedServerConsoleStatusUnsafe("server", rawLine);
-            }
-        }
-    }
-
-    private static bool TrySplitHostedServerLogLine(string rawLine, out string source, out string message)
-    {
-        source = string.Empty;
-        message = string.Empty;
-        if (!rawLine.StartsWith('['))
-        {
-            return false;
-        }
-
-        var sourceStart = rawLine.IndexOf("] [", StringComparison.Ordinal);
-        if (sourceStart < 0)
-        {
-            return false;
-        }
-
-        var messageStart = rawLine.IndexOf("] ", sourceStart + 3, StringComparison.Ordinal);
-        if (messageStart < 0)
-        {
-            return false;
-        }
-
-        source = rawLine[(sourceStart + 3)..messageStart];
-        message = rawLine[(messageStart + 2)..];
         return true;
     }
 

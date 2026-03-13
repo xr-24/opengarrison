@@ -2,24 +2,46 @@ how to build
 
 from `Source\GG2.CSharp`:
 
-windows:
+windows (all default platforms):
 powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
 
-linux/macOS:
+linux/macOS (all default platforms):
 pwsh ./scripts/package.ps1
 
-build to windows only:
+windows only:
 powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('win-x64')
 
-build to linux only:
+windows only, skip tests:
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('win-x64') -SkipTests
+
+from windows, build linux distro:
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('linux-x64')
+
+from windows, build linux distro and skip tests:
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('linux-x64') -SkipTests
+
+from windows, build macOS distro:
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('osx-x64','osx-arm64')
+
+from windows, build macOS distro and skip tests:
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -Platforms @('osx-x64','osx-arm64') -SkipTests
+
+linux only:
 pwsh ./scripts/package.ps1 -Platforms @('linux-x64')
 
-build to macOS only:
+linux only, skip tests:
+pwsh ./scripts/package.ps1 -Platforms @('linux-x64') -SkipTests
+
+macOS only:
 pwsh ./scripts/package.ps1 -Platforms @('osx-x64','osx-arm64')
+
+macOS only, skip tests:
+pwsh ./scripts/package.ps1 -Platforms @('osx-x64','osx-arm64') -SkipTests
 
 output:
 Source\GG2.CSharp\dist\opengarrison-*
 
 notes:
-- the script runs dotnet test GG2.sln -c Release first
+- the script restores local tools once, restores tests once if enabled, restores once per requested runtime, then publishes with `--no-restore`
+- use `-SkipTests` if you want to skip the upfront `dotnet test`
 - it publishes GG2.Client, GG2.ServerLauncher, and GG2.Server, then copies assets/configs and archives them
