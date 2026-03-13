@@ -26,12 +26,17 @@ public partial class Game1
                     _networkClient.SetLocalPlayerSlot(welcome.PlayerSlot);
                     _networkClient.ClearPendingTeamSelection();
                     _networkClient.ClearPendingClassSelection();
+                    ResetClientTimingState();
                     _world.TryLoadLevel(welcome.LevelName);
                     _pendingHostedConnectTicks = -1;
                     _lastAppliedSnapshotFrame = 0;
                     _hasReceivedSnapshot = false;
                     _lastSnapshotReceivedTimeSeconds = -1d;
+                    _latestSnapshotServerTimeSeconds = -1d;
+                    _latestSnapshotReceivedClockSeconds = -1d;
                     _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+                    _smoothedSnapshotJitterSeconds = 0f;
+                    _localPlayerSnapshotEntityId = null;
                     _consoleOpen = false;
                     _mainMenuOpen = false;
                     _manualConnectOpen = false;
@@ -156,6 +161,9 @@ public partial class Game1
                         break;
                     }
 
+                    var localSnapshotPlayer = snapshot.Players.FirstOrDefault(player => player.Slot == _networkClient.LocalPlayerSlot);
+                    _localPlayerSnapshotEntityId = localSnapshotPlayer?.PlayerId;
+
                     _lastAppliedSnapshotFrame = snapshot.Frame;
                     if (!_world.ApplySnapshot(snapshot, _networkClient.LocalPlayerSlot))
                     {
@@ -174,7 +182,7 @@ public partial class Game1
 
                         _pendingNetworkVisualEvents.Add(visualEvent);
                     }
-                    CaptureRemoteInterpolationTargets(snapshot.TickRate);
+                    CaptureRemoteInterpolationTargets(snapshot.Frame, snapshot.TickRate);
                     ReconcileLocalPrediction(snapshot.LastProcessedInputSequence);
                     break;
             }

@@ -11,6 +11,7 @@ public partial class Game1
     private const int MaxPredictedCollisionResolutionIterations = 10;
     private const float PredictedCollisionMoveStep = 1f;
     private const float PredictedStepUpHeight = 6f;
+    private const float PredictedStepSupportEpsilon = 2f;
 
     private float GetPredictedMovementScale(PlayerEntity player, PlayerInputSnapshot input)
     {
@@ -52,11 +53,12 @@ public partial class Game1
         return 1f;
     }
 
-    private void UpdateLocalPredictedRenderPosition(float deltaSeconds)
+    private void UpdateLocalPredictedRenderPosition()
     {
         if (!_networkClient.IsConnected || !_hasPredictedLocalPlayerPosition || !_world.LocalPlayer.IsAlive || _world.LocalPlayerAwaitingJoin)
         {
             _hasSmoothedLocalPlayerRenderPosition = false;
+            _lastPredictedRenderSmoothingTimeSeconds = -1d;
             return;
         }
 
@@ -64,8 +66,21 @@ public partial class Game1
         {
             _smoothedLocalPlayerRenderPosition = _predictedLocalPlayerPosition;
             _hasSmoothedLocalPlayerRenderPosition = true;
+            _lastPredictedRenderSmoothingTimeSeconds = _networkInterpolationClockSeconds;
             return;
         }
+
+        if (_lastPredictedRenderSmoothingTimeSeconds < 0d)
+        {
+            _lastPredictedRenderSmoothingTimeSeconds = _networkInterpolationClockSeconds;
+            return;
+        }
+
+        var deltaSeconds = (float)Math.Clamp(
+            _networkInterpolationClockSeconds - _lastPredictedRenderSmoothingTimeSeconds,
+            0d,
+            0.05d);
+        _lastPredictedRenderSmoothingTimeSeconds = _networkInterpolationClockSeconds;
 
         var delta = _predictedLocalPlayerPosition - _smoothedLocalPlayerRenderPosition;
         var distance = delta.Length();
@@ -78,6 +93,11 @@ public partial class Game1
         if (distance >= 24f)
         {
             _smoothedLocalPlayerRenderPosition = _predictedLocalPlayerPosition;
+            return;
+        }
+
+        if (deltaSeconds <= 0f)
+        {
             return;
         }
 
@@ -146,9 +166,25 @@ public partial class Game1
         _predictedLocalPlayerVelocity.Y += player.Gravity * dt;
         MovePredictedWithCollisions(player, _predictedLocalPlayerVelocity.X * dt, _predictedLocalPlayerVelocity.Y * dt);
 
-        _predictedLocalPlayerPosition = new Vector2(
-            _world.Bounds.ClampX(_predictedLocalPlayerPosition.X, player.Width),
-            _world.Bounds.ClampY(_predictedLocalPlayerPosition.Y, player.Height));
+        var clampedX = _world.Bounds.ClampX(_predictedLocalPlayerPosition.X, player.Width);
+        if (clampedX != _predictedLocalPlayerPosition.X)
+        {
+            _predictedLocalPlayerPosition.X = clampedX;
+            _predictedLocalPlayerVelocity.X = 0f;
+        }
+
+        var clampedY = _world.Bounds.ClampY(_predictedLocalPlayerPosition.Y, player.Height);
+        if (clampedY != _predictedLocalPlayerPosition.Y)
+        {
+            if (_predictedLocalPlayerVelocity.Y > 0f)
+            {
+                _predictedLocalPlayerGrounded = true;
+                _predictedLocalPlayerRemainingAirJumps = player.MaxAirJumps;
+            }
+
+            _predictedLocalPlayerPosition.Y = clampedY;
+            _predictedLocalPlayerVelocity.Y = 0f;
+        }
     }
 
     private void TryPredictedJump(PlayerEntity player)
@@ -177,6 +213,12 @@ public partial class Game1
 
     private void MovePredictedWithCollisions(PlayerEntity player, float moveX, float moveY)
     {
+        if (!float.IsFinite(moveX) || !float.IsFinite(moveY))
+        {
+            _predictedLocalPlayerVelocity = Vector2.Zero;
+            return;
+        }
+
         NudgePredictedOutsideBlockingGeometry(player);
         var remainingX = moveX;
         var remainingY = moveY;
@@ -224,6 +266,12 @@ public partial class Game1
             }
         }
 
+        TryApplyPredictedResidualMovement(player, remainingX, remainingY);
+        RefreshPredictedGroundSupport(player);
+    }
+
+    private void TryApplyPredictedResidualMovement(PlayerEntity player, float remainingX, float remainingY)
+    {
         if (MathF.Abs(remainingX) <= 0f && MathF.Abs(remainingY) <= 0f)
         {
             return;
@@ -246,6 +294,24 @@ public partial class Game1
         {
             _predictedLocalPlayerPosition.Y += remainingY;
         }
+    }
+
+    private void RefreshPredictedGroundSupport(PlayerEntity player)
+    {
+        if (_predictedLocalPlayerVelocity.Y < 0f
+            || !CanOccupyPredicted(player, _predictedLocalPlayerPosition.X, _predictedLocalPlayerPosition.Y))
+        {
+            return;
+        }
+
+        if (CanOccupyPredicted(player, _predictedLocalPlayerPosition.X, _predictedLocalPlayerPosition.Y + PredictedStepSupportEpsilon))
+        {
+            return;
+        }
+
+        _predictedLocalPlayerGrounded = true;
+        _predictedLocalPlayerRemainingAirJumps = player.MaxAirJumps;
+        _predictedLocalPlayerVelocity.Y = 0f;
     }
 
     private void MovePredictedContact(PlayerEntity player, float deltaX, float deltaY)

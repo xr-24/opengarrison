@@ -35,7 +35,7 @@ public partial class Game1
     {
         foreach (var sentry in _world.Sentries)
         {
-            if (sentry.OwnerPlayerId == _world.LocalPlayer.Id)
+            if (sentry.OwnerPlayerId == GetPlayerStateKey(_world.LocalPlayer))
             {
                 return sentry;
             }
@@ -176,7 +176,7 @@ public partial class Game1
             healingTarget = null;
         }
 
-        var healer = FindMedicHealingPlayer(_world.LocalPlayer.Id);
+        var healer = FindMedicHealingPlayer(GetPlayerStateKey(_world.LocalPlayer));
         var drewHealingHud = false;
         if (_showHealingEnabled && healingTarget is not null)
         {

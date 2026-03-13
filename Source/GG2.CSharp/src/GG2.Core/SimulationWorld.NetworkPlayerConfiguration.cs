@@ -148,9 +148,7 @@ public sealed partial class SimulationWorld
             return false;
         }
 
-        TrySetNetworkPlayerClassDefinition(slot, definition);
-        player.SetClassDefinition(definition);
-        return TryForceRespawnNetworkPlayer(slot);
+        return TryApplyNetworkPlayerClassChange(slot, definition);
     }
 
     public void SetLocalPlayerTeam(PlayerTeam team)
@@ -250,5 +248,25 @@ public sealed partial class SimulationWorld
                 _additionalNetworkPlayerClassDefinitions[slot] = definition;
                 return true;
         }
+    }
+
+    private bool TryApplyNetworkPlayerClassChange(byte slot, CharacterClassDefinition definition)
+    {
+        if (!TrySetNetworkPlayerClassDefinition(slot, definition) || !TryGetNetworkPlayer(slot, out var player))
+        {
+            return false;
+        }
+
+        if (player.IsAlive)
+        {
+            KillPlayer(
+                player,
+                weaponSpriteName: "DeadS",
+                killFeedMessage: player.DisplayName + ClassChangeKillFeedSuffix,
+                createDeathCam: false);
+        }
+
+        player.SetClassDefinition(definition);
+        return true;
     }
 }

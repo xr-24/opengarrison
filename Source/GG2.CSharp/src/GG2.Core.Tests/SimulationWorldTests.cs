@@ -28,13 +28,21 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
-    public void TrySetLocalClass_RespawnsPlayerAsRequestedClass()
+    public void TrySetLocalClass_KillsPlayerAndRespawnsAsRequestedClass()
     {
         var world = CreateWorld();
 
         var changed = world.TrySetLocalClass(PlayerClass.Engineer);
 
         Assert.True(changed);
+        Assert.False(world.LocalPlayer.IsAlive);
+        Assert.Equal(150, world.LocalPlayerRespawnTicks);
+        Assert.Null(world.LocalDeathCam);
+        var killFeedEntry = Assert.Single(world.KillFeed);
+        Assert.Equal("Player 1 bid farewell, cruel world!", killFeedEntry.MessageText);
+
+        AdvanceTicks(world, 150);
+
         Assert.Equal(PlayerClass.Engineer, world.LocalPlayer.ClassId);
         Assert.Equal("Engineer", world.LocalPlayer.ClassName);
         Assert.True(world.LocalPlayer.IsAlive);
@@ -46,7 +54,7 @@ public sealed class SimulationWorldTests
     public void EngineerCanOnlyBuildOneSentryAndSpendsMetal()
     {
         var world = CreateWorld();
-        world.TrySetLocalClass(PlayerClass.Engineer);
+        SetLocalClassAndRespawn(world, PlayerClass.Engineer);
 
         var builtFirst = world.TryBuildLocalSentry();
         var builtSecond = world.TryBuildLocalSentry();
@@ -186,7 +194,7 @@ public sealed class SimulationWorldTests
     public void DestroyingLocalSentry_EmitsExplosionSoundAndVisual()
     {
         var world = CreateWorld();
-        world.TrySetLocalClass(PlayerClass.Engineer);
+        SetLocalClassAndRespawn(world, PlayerClass.Engineer);
 
         Assert.True(world.TryBuildLocalSentry());
 
@@ -206,7 +214,7 @@ public sealed class SimulationWorldTests
     public void RocketExplosion_EmitsExplosionSoundAndVisual()
     {
         var world = CreateWorld();
-        world.TrySetLocalClass(PlayerClass.Soldier);
+        SetLocalClassAndRespawn(world, PlayerClass.Soldier);
         world.TeleportLocalPlayer(30f, world.LocalPlayer.Y);
 
         world.SetLocalInput(new PlayerInputSnapshot(
@@ -237,7 +245,7 @@ public sealed class SimulationWorldTests
     public void MineDetonation_EmitsExplosionSoundAndVisual()
     {
         var world = CreateWorld();
-        world.TrySetLocalClass(PlayerClass.Demoman);
+        SetLocalClassAndRespawn(world, PlayerClass.Demoman);
 
         world.SetLocalInput(new PlayerInputSnapshot(
             Left: false,
@@ -716,7 +724,7 @@ public sealed class SimulationWorldTests
         var world = CreateWorld();
         const byte extraSlot = 3;
 
-        world.TrySetLocalClass(PlayerClass.Engineer);
+        SetLocalClassAndRespawn(world, PlayerClass.Engineer);
         Assert.True(world.TryBuildLocalSentry());
         Assert.True(world.TryPrepareNetworkPlayerJoin(extraSlot));
         Assert.True(world.TrySetNetworkPlayerTeam(extraSlot, PlayerTeam.Blue));
@@ -826,6 +834,46 @@ public sealed class SimulationWorldTests
         Assert.Equal("You were killed by the late", deathCam.KillMessage);
     }
 
+    [Fact]
+    public void EndedRound_HumiliatesLosersAndBlocksCombatInput()
+    {
+        var world = CreateWorld();
+        const byte losingSlot = 3;
+
+        Assert.True(world.TryLoadLevel("destroy"));
+        Assert.True(world.TryPrepareNetworkPlayerJoin(losingSlot));
+        Assert.True(world.TrySetNetworkPlayerTeam(losingSlot, PlayerTeam.Blue));
+        Assert.True(world.TryApplyNetworkPlayerClassSelection(losingSlot, PlayerClass.Soldier));
+        Assert.True(world.TryGetNetworkPlayer(losingSlot, out var losingPlayer));
+
+        world.CombatTestSetGeneratorHealth(PlayerTeam.Blue, 4);
+        Assert.True(world.CombatTestDamageGenerator(PlayerTeam.Blue, 10f));
+        Assert.True(world.MatchState.IsEnded);
+        Assert.Equal(PlayerTeam.Red, world.MatchState.WinnerTeam);
+        Assert.True(world.IsPlayerHumiliated(losingPlayer));
+        Assert.False(world.IsPlayerHumiliated(world.LocalPlayer));
+
+        Assert.True(world.TrySetNetworkPlayerInput(
+            losingSlot,
+            new PlayerInputSnapshot(
+                Left: false,
+                Right: false,
+                Up: false,
+                Down: false,
+                BuildSentry: false,
+                DestroySentry: false,
+                Taunt: false,
+                FirePrimary: true,
+                FireSecondary: false,
+                AimWorldX: losingPlayer.X + 80f,
+                AimWorldY: losingPlayer.Y,
+                DebugKill: false)));
+
+        world.AdvanceOneTick();
+
+        Assert.Empty(world.Rockets);
+    }
+
     private static SimulationWorld CreateWorld()
     {
         return new SimulationWorld(new SimulationConfig
@@ -900,6 +948,14 @@ public sealed class SimulationWorldTests
         {
             world.AdvanceOneTick();
         }
+    }
+
+    private static void SetLocalClassAndRespawn(SimulationWorld world, PlayerClass playerClass)
+    {
+        Assert.True(world.TrySetLocalClass(playerClass));
+        AdvanceTicks(world, 150);
+        Assert.True(world.LocalPlayer.IsAlive);
+        Assert.Equal(playerClass, world.LocalPlayer.ClassId);
     }
 
     private static bool AdvanceUntilExplosion(SimulationWorld world, int maxTicks = 60)

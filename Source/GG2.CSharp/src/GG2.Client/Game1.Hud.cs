@@ -84,7 +84,7 @@ public partial class Game1
         {
             if (_scoreboardAlpha < 0.99f)
             {
-                _scoreboardAlpha = MathF.Min(0.99f, MathF.Pow(MathF.Max(_scoreboardAlpha, 0.02f), 0.7f));
+                _scoreboardAlpha = AdvanceOpeningAlpha(_scoreboardAlpha, 0.02f, 0.99f);
             }
 
             return;
@@ -92,7 +92,7 @@ public partial class Game1
 
         if (_scoreboardAlpha > 0.02f)
         {
-            _scoreboardAlpha = MathF.Max(0.02f, MathF.Pow(_scoreboardAlpha, 1f / 0.7f));
+            _scoreboardAlpha = AdvanceClosingAlpha(_scoreboardAlpha, 0.02f);
         }
     }
 }

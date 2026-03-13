@@ -191,20 +191,27 @@ internal sealed class NetworkGameClient : IDisposable
 
     public IEnumerable<IProtocolMessage> ReceiveMessages()
     {
-        if (!IsConnected || _udpClient is null)
+        var udpClient = _udpClient;
+        if (!IsConnected || udpClient is null)
         {
             return [];
         }
 
         FlushHandshakeState();
         FlushPendingOutboundPackets();
+        udpClient = _udpClient;
+        if (!IsConnected || udpClient is null)
+        {
+            return [];
+        }
+
         var messages = new List<IProtocolMessage>();
-        while (_udpClient.Available > 0)
+        while (udpClient.Available > 0)
         {
             try
             {
                 IPEndPoint remoteEndPoint = new(IPAddress.Any, 0);
-                var payload = _udpClient.Receive(ref remoteEndPoint);
+                var payload = udpClient.Receive(ref remoteEndPoint);
                 if (_serverEndPoint is not null && !EndpointsEqual(remoteEndPoint, _serverEndPoint))
                 {
                     continue;

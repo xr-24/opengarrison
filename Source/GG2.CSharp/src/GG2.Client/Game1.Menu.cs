@@ -12,9 +12,7 @@ public partial class Game1
         StopFaucetMusic();
         StopIngameMusic();
 
-        UpdatePendingHostedConnect();
         UpdateLobbyBrowserResponses();
-        UpdateServerLauncherState();
 
         if (_hostSetupOpen)
         {

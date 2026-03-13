@@ -16,12 +16,12 @@ public partial class Game1
             _classSelectHoverIndex = -1;
             if (_classSelectAlpha > 0.01f)
             {
-                _classSelectAlpha = MathF.Max(0.01f, MathF.Pow(_classSelectAlpha, 1f / 0.7f));
+                _classSelectAlpha = AdvanceClosingAlpha(_classSelectAlpha, 0.01f);
             }
 
             if (_classSelectPanelY > -120f)
             {
-                _classSelectPanelY = MathF.Max(-120f, _classSelectPanelY - 15f);
+                _classSelectPanelY = MathF.Max(-120f, _classSelectPanelY - ScaleLegacyUiDistance(15f));
             }
 
             return;
@@ -37,12 +37,12 @@ public partial class Game1
 
         if (_classSelectAlpha < 0.99f)
         {
-            _classSelectAlpha = MathF.Min(0.99f, MathF.Pow(MathF.Max(_classSelectAlpha, 0.01f), 0.7f));
+            _classSelectAlpha = AdvanceOpeningAlpha(_classSelectAlpha, 0.01f, 0.99f);
         }
 
         if (_classSelectPanelY < 120f)
         {
-            _classSelectPanelY = MathF.Min(120f, _classSelectPanelY + 15f);
+            _classSelectPanelY = MathF.Min(120f, _classSelectPanelY + ScaleLegacyUiDistance(15f));
         }
 
         var panelLeft = (_graphics.PreferredBackBufferWidth / 2f) - 400f;

@@ -113,12 +113,12 @@ public partial class Game1
         {
             if (_bubbleMenuAlpha < 0.99f)
             {
-                _bubbleMenuAlpha = MathF.Min(0.99f, MathF.Pow(MathF.Max(_bubbleMenuAlpha, 0.01f), 0.7f));
+                _bubbleMenuAlpha = AdvanceOpeningAlpha(_bubbleMenuAlpha, 0.01f, 0.99f);
             }
 
             if (_bubbleMenuX < 31f)
             {
-                _bubbleMenuX = MathF.Min(31f, _bubbleMenuX + 15f);
+                _bubbleMenuX = MathF.Min(31f, _bubbleMenuX + ScaleLegacyUiDistance(15f));
             }
 
             return;
@@ -126,10 +126,10 @@ public partial class Game1
 
         if (_bubbleMenuAlpha > 0.01f)
         {
-            _bubbleMenuAlpha = MathF.Max(0.01f, MathF.Pow(_bubbleMenuAlpha, 1f / 0.7f));
+            _bubbleMenuAlpha = AdvanceClosingAlpha(_bubbleMenuAlpha, 0.01f);
         }
 
-        _bubbleMenuX -= 15f;
+        _bubbleMenuX -= ScaleLegacyUiDistance(15f);
         if (_bubbleMenuX > -62f)
         {
             return;

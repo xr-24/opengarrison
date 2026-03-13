@@ -1,11 +1,10 @@
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
-using System.Runtime.Versioning;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace GG2.Core;
 
-[SupportedOSPlatform("windows")]
 public static class GameMakerCollisionMaskImporter
 {
     public static IReadOnlyList<LevelSolid> Import(string collisionMaskPath, WorldBounds bounds)
@@ -15,20 +14,20 @@ public static class GameMakerCollisionMaskImporter
             return [];
         }
 
-        using var bitmap = new Bitmap(collisionMaskPath);
-        if (bitmap.Width <= 0 || bitmap.Height <= 0)
+        using var image = Image.Load<Rgba32>(collisionMaskPath);
+        if (image.Width <= 0 || image.Height <= 0)
         {
             return [];
         }
 
-        var pixelWidth = bounds.Width / bitmap.Width;
-        var pixelHeight = bounds.Height / bitmap.Height;
+        var pixelWidth = bounds.Width / image.Width;
+        var pixelHeight = bounds.Height / image.Height;
         var activeRects = new Dictionary<(int X, int Width), RectanglePixels>();
         var mergedRects = new List<RectanglePixels>();
 
-        for (var y = 0; y < bitmap.Height; y++)
+        for (var y = 0; y < image.Height; y++)
         {
-            var rowRuns = ReadOpaqueRuns(bitmap, y);
+            var rowRuns = ReadOpaqueRuns(image, y);
             var nextActiveRects = new Dictionary<(int X, int Width), RectanglePixels>();
 
             foreach (var run in rowRuns)
@@ -64,14 +63,14 @@ public static class GameMakerCollisionMaskImporter
         return solids;
     }
 
-    private static List<RowRun> ReadOpaqueRuns(Bitmap bitmap, int y)
+    private static List<RowRun> ReadOpaqueRuns(Image<Rgba32> image, int y)
     {
         var runs = new List<RowRun>();
         var currentRunStart = -1;
 
-        for (var x = 0; x < bitmap.Width; x++)
+        for (var x = 0; x < image.Width; x++)
         {
-            var isOpaque = bitmap.GetPixel(x, y).A > 0;
+            var isOpaque = image[x, y].A > 0;
             if (isOpaque)
             {
                 if (currentRunStart < 0)
@@ -91,7 +90,7 @@ public static class GameMakerCollisionMaskImporter
 
         if (currentRunStart >= 0)
         {
-            runs.Add(new RowRun(currentRunStart, bitmap.Width - currentRunStart));
+            runs.Add(new RowRun(currentRunStart, image.Width - currentRunStart));
         }
 
         return runs;

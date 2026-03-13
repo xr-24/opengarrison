@@ -92,6 +92,9 @@ public partial class Game1 : Game
     private readonly Dictionary<int, int> _playerWeaponFlashTicks = new();
     private readonly Dictionary<int, int> _playerPreviousAmmoCounts = new();
     private readonly Dictionary<int, int> _playerPreviousCooldownTicks = new();
+    private readonly Dictionary<int, Vector2> _playerPreviousRenderPositions = new();
+    private readonly Dictionary<int, double> _playerPreviousRenderSampleTimes = new();
+    private int? _localPlayerSnapshotEntityId;
     private readonly Random _visualRandom = new(1337);
     private bool _wasLocalPlayerAlive = true;
     private bool _wasDeathCamActive;
@@ -216,7 +219,7 @@ public partial class Game1 : Game
         ApplyLoadedSettings();
 
         IsFixedTimeStep = true;
-        TargetElapsedTime = TimeSpan.FromSeconds(_config.FixedDeltaSeconds);
+        TargetElapsedTime = TimeSpan.FromSeconds(1d / ClientUpdateTicksPerSecond);
     }
 
     protected override void Initialize()
@@ -261,6 +264,8 @@ public partial class Game1 : Game
         _networkClient.Dispose();
         _runtimeAssets?.Dispose();
         _menuBackgroundTexture?.Dispose();
+        _deathCamCaptureTarget?.Dispose();
+        _deathCamCaptureTarget = null;
         _menuBackgroundTexture = null;
         PersistClientSettings();
         PersistInputBindings();
@@ -270,6 +275,7 @@ public partial class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         _networkInterpolationClockSeconds = _networkInterpolationClock.Elapsed.TotalSeconds;
+        var clientTicks = ConsumeClientTickCount(gameTime);
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
         if (TryHandlePasswordPromptCancel(keyboard, mouse))
@@ -284,13 +290,13 @@ public partial class Game1 : Game
             _consoleOpen = !_consoleOpen;
         }
 
-        if (TryUpdateNonGameplayFrame(keyboard, mouse))
+        if (TryUpdateNonGameplayFrame(gameTime, keyboard, mouse, clientTicks))
         {
             base.Update(gameTime);
             return;
         }
 
-        UpdateGameplayFrame(gameTime, keyboard, mouse);
+        UpdateGameplayFrame(gameTime, keyboard, mouse, clientTicks);
 
         base.Update(gameTime);
     }

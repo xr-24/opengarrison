@@ -99,10 +99,17 @@ public sealed class GameMakerRuntimeAssetCache : IDisposable
             return null;
         }
 
-        using var stream = File.OpenRead(soundAsset.AudioPath);
-        cached = SoundEffect.FromStream(stream);
-        _sounds[soundName] = cached;
-        return cached;
+        try
+        {
+            using var stream = File.OpenRead(soundAsset.AudioPath);
+            cached = SoundEffect.FromStream(stream);
+            _sounds[soundName] = cached;
+            return cached;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public void Dispose()

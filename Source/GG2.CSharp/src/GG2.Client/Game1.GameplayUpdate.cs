@@ -108,6 +108,24 @@ public partial class Game1
             ? default
             : KeyboardInputMapper.BuildGameplaySnapshot(_inputBindings, keyboard, mouse, cameraPosition.X, cameraPosition.Y);
 
+        if (_world.IsPlayerHumiliated(_world.LocalPlayer))
+        {
+            gameplayInput = gameplayInput with
+            {
+                FirePrimary = false,
+                FireSecondary = false,
+                BuildSentry = false,
+                DestroySentry = false,
+            };
+            networkInput = networkInput with
+            {
+                FirePrimary = false,
+                FireSecondary = false,
+                BuildSentry = false,
+                DestroySentry = false,
+            };
+        }
+
         UpdateBuildMenuState(keyboard, mouse);
         if (_pendingBuildSentry || _pendingDestroySentry)
         {
@@ -132,12 +150,7 @@ public partial class Game1
     {
         if (_networkClient.IsConnected)
         {
-            var jumpPressed = networkInput.Up
-                && !_previousKeyboard.IsKeyDown(_inputBindings.MoveUp)
-                && !_previousKeyboard.IsKeyDown(Keys.Up);
-            var sentInputSequence = _networkClient.SendInput(networkInput);
-            RecordPredictedInput(sentInputSequence, networkInput, jumpPressed);
-            ProcessNetworkMessages();
+            AdvanceNetworkInputLane(networkInput);
         }
         else
         {
@@ -145,24 +158,19 @@ public partial class Game1
         }
     }
 
-    private void UpdateGameplayPresentation(GameTime gameTime, MouseState mouse)
+    private void UpdateGameplayPresentation(GameTime gameTime, MouseState mouse, int clientTicks)
     {
         UpdateInterpolatedWorldState();
-        AdvanceChatHud();
         UpdateLocalSentryNotice();
         UpdateIntelNotice();
-        UpdateNoticeState();
-        UpdateLocalPredictedRenderPosition((float)gameTime.ElapsedGameTime.TotalSeconds);
+        UpdateLocalPredictedRenderPosition();
         foreach (var player in EnumerateRenderablePlayers())
         {
             UpdatePlayerRenderState(player);
         }
 
         RemoveStalePlayerRenderState();
-        AdvanceExplosionVisuals();
-        AdvanceBloodVisuals();
-        AdvanceRocketSmokeVisuals();
-        AdvanceFlameSmokeVisuals();
+        AdvanceGameplayClientTicks(clientTicks);
         PlayPendingVisualEvents();
         PlayPendingSoundEvents();
         PlayDeathCamSoundIfNeeded();
@@ -209,13 +217,5 @@ public partial class Game1
         _wasLocalPlayerAlive = _world.LocalPlayer.IsAlive;
         _wasDeathCamActive = !_world.LocalPlayer.IsAlive && _world.LocalDeathCam is not null;
         _wasMatchEnded = _world.MatchState.IsEnded;
-        if (_autoBalanceNoticeTicks > 0)
-        {
-            _autoBalanceNoticeTicks = Math.Max(0, _autoBalanceNoticeTicks - 1);
-            if (_autoBalanceNoticeTicks == 0)
-            {
-                _autoBalanceNoticeText = string.Empty;
-            }
-        }
     }
 }

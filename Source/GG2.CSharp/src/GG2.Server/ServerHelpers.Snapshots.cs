@@ -238,7 +238,8 @@ internal static partial class ServerHelpers
             (byte)entry.KillerTeam,
             entry.WeaponSpriteName,
             entry.VictimName,
-            (byte)entry.VictimTeam);
+            (byte)entry.VictimTeam,
+            entry.MessageText);
     }
 
     internal static SnapshotDeathCamState? ToSnapshotDeathCamState(LocalDeathCamState? deathCam)
@@ -256,6 +257,7 @@ internal static partial class ServerHelpers
             deathCam.KillerTeam.HasValue ? (byte)deathCam.KillerTeam.Value : (byte)0,
             deathCam.Health,
             deathCam.MaxHealth,
-            deathCam.RemainingTicks);
+            deathCam.RemainingTicks,
+            deathCam.InitialTicks);
     }
 }

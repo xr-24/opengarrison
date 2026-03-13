@@ -16,100 +16,143 @@ public partial class Game1
     private SoundEffectInstance? _faucetMusicInstance;
     private SoundEffect? _ingameMusic;
     private SoundEffectInstance? _ingameMusicInstance;
+    private bool _audioAvailable = true;
     private bool _ingameMusicEnabled = true;
     private readonly HashSet<ulong> _processedNetworkSoundEventIds = new();
     private readonly Queue<ulong> _processedNetworkSoundEventOrder = new();
 
     private void LoadMenuMusic()
     {
-        var candidates = new[] { "menumusic1.wav", "menumusic2.wav" };
-        var chosen = candidates[_visualRandom.Next(candidates.Length)];
-        var musicPath = ProjectSourceLocator.FindFile(Path.Combine("Music", chosen));
-        if (musicPath is null || !File.Exists(musicPath))
+        if (!_audioAvailable)
         {
             return;
         }
 
-        using var stream = File.OpenRead(musicPath);
-        _menuMusic = SoundEffect.FromStream(stream);
-        _menuMusicInstance = _menuMusic.CreateInstance();
-        _menuMusicInstance.IsLooped = true;
+        var candidates = new[] { "menumusic1.wav", "menumusic2.wav" };
+        var chosen = candidates[_visualRandom.Next(candidates.Length)];
+        TryLoadLoopedMusic(Path.Combine("Music", chosen), out _menuMusic, out _menuMusicInstance);
     }
 
     private void LoadFaucetMusic()
     {
-        var musicPath = ProjectSourceLocator.FindFile(Path.Combine("Music", "faucetmusic.wav"));
-        if (musicPath is null || !File.Exists(musicPath))
+        if (!_audioAvailable)
         {
             return;
         }
 
-        using var stream = File.OpenRead(musicPath);
-        _faucetMusic = SoundEffect.FromStream(stream);
-        _faucetMusicInstance = _faucetMusic.CreateInstance();
-        _faucetMusicInstance.IsLooped = true;
-        _faucetMusicInstance.Volume = 0.8f;
+        TryLoadLoopedMusic(Path.Combine("Music", "faucetmusic.wav"), out _faucetMusic, out _faucetMusicInstance, 0.8f);
     }
 
     private void LoadIngameMusic()
     {
-        var musicPath = ProjectSourceLocator.FindFile(Path.Combine("Music", "ingamemusic.wav"));
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
+        TryLoadLoopedMusic(Path.Combine("Music", "ingamemusic.wav"), out _ingameMusic, out _ingameMusicInstance);
+    }
+
+    private void TryLoadLoopedMusic(
+        string relativePath,
+        out SoundEffect? music,
+        out SoundEffectInstance? musicInstance,
+        float volume = 1f)
+    {
+        music = null;
+        musicInstance = null;
+
+        var musicPath = ProjectSourceLocator.FindFile(relativePath);
         if (musicPath is null || !File.Exists(musicPath))
         {
             return;
         }
 
-        using var stream = File.OpenRead(musicPath);
-        _ingameMusic = SoundEffect.FromStream(stream);
-        _ingameMusicInstance = _ingameMusic.CreateInstance();
-        _ingameMusicInstance.IsLooped = true;
+        try
+        {
+            using var stream = File.OpenRead(musicPath);
+            music = SoundEffect.FromStream(stream);
+            musicInstance = music.CreateInstance();
+            musicInstance.IsLooped = true;
+            musicInstance.Volume = volume;
+        }
+        catch (Exception ex)
+        {
+            DisableAudio("initializing audio", ex);
+        }
     }
 
     private void EnsureMenuMusicPlaying()
     {
-        if (IsServerLauncherMode || _menuMusicInstance is null)
+        if (IsServerLauncherMode || _menuMusicInstance is null || !_audioAvailable)
         {
             return;
         }
 
-        if (_menuMusicInstance.State != SoundState.Playing)
+        try
         {
-            _menuMusicInstance.Play();
+            if (_menuMusicInstance.State != SoundState.Playing)
+            {
+                _menuMusicInstance.Play();
+            }
+        }
+        catch (Exception ex)
+        {
+            DisableAudio("starting menu music", ex);
         }
     }
 
     private void EnsureFaucetMusicPlaying()
     {
-        if (_faucetMusicInstance is null)
+        if (_faucetMusicInstance is null || !_audioAvailable)
         {
             return;
         }
 
-        if (_faucetMusicInstance.State != SoundState.Playing)
+        try
         {
-            _faucetMusicInstance.Play();
+            if (_faucetMusicInstance.State != SoundState.Playing)
+            {
+                _faucetMusicInstance.Play();
+            }
+        }
+        catch (Exception ex)
+        {
+            DisableAudio("starting faucet music", ex);
         }
     }
 
     private void StopMenuMusic()
     {
-        if (_menuMusicInstance?.State == SoundState.Playing)
+        try
         {
-            _menuMusicInstance.Stop();
+            if (_menuMusicInstance?.State == SoundState.Playing)
+            {
+                _menuMusicInstance.Stop();
+            }
+        }
+        catch
+        {
         }
     }
 
     private void StopFaucetMusic()
     {
-        if (_faucetMusicInstance?.State == SoundState.Playing)
+        try
         {
-            _faucetMusicInstance.Stop();
+            if (_faucetMusicInstance?.State == SoundState.Playing)
+            {
+                _faucetMusicInstance.Stop();
+            }
+        }
+        catch
+        {
         }
     }
 
     private void EnsureIngameMusicPlaying()
     {
-        if (_ingameMusicInstance is null || !_ingameMusicEnabled)
+        if (_ingameMusicInstance is null || !_ingameMusicEnabled || !_audioAvailable)
         {
             return;
         }
@@ -119,22 +162,40 @@ public partial class Game1
             return;
         }
 
-        if (_ingameMusicInstance.State != SoundState.Playing)
+        try
         {
-            _ingameMusicInstance.Play();
+            if (_ingameMusicInstance.State != SoundState.Playing)
+            {
+                _ingameMusicInstance.Play();
+            }
+        }
+        catch (Exception ex)
+        {
+            DisableAudio("starting in-game music", ex);
         }
     }
 
     private void StopIngameMusic()
     {
-        if (_ingameMusicInstance?.State == SoundState.Playing)
+        try
         {
-            _ingameMusicInstance.Stop();
+            if (_ingameMusicInstance?.State == SoundState.Playing)
+            {
+                _ingameMusicInstance.Stop();
+            }
+        }
+        catch
+        {
         }
     }
 
     private void PlayDeathCamSoundIfNeeded()
     {
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
         var deathCamActive = _killCamEnabled && !_world.LocalPlayer.IsAlive && _world.LocalDeathCam is not null;
         if (!deathCamActive || _wasDeathCamActive)
         {
@@ -142,11 +203,16 @@ public partial class Game1
         }
 
         var sound = _runtimeAssets.GetSound("DeathCamSnd");
-        sound?.Play(0.6f, 0f, 0f);
+        TryPlaySound(sound, 0.6f, 0f, 0f);
     }
 
     private void PlayRoundEndSoundIfNeeded()
     {
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
         if (!_world.MatchState.IsEnded || _wasMatchEnded)
         {
             return;
@@ -166,11 +232,16 @@ public partial class Game1
         }
 
         var sound = _runtimeAssets.GetSound(soundName);
-        sound?.Play(0.8f, 0f, 0f);
+        TryPlaySound(sound, 0.8f, 0f, 0f);
     }
 
     private void PlayPendingSoundEvents()
     {
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
         foreach (var soundEvent in _world.DrainPendingSoundEvents())
         {
             if (!ShouldProcessNetworkEvent(soundEvent.EventId, _processedNetworkSoundEventIds, _processedNetworkSoundEventOrder))
@@ -199,7 +270,50 @@ public partial class Game1
             }
 
             var pan = Math.Clamp(dx / 600f, -1f, 1f);
-            sound.Play(volume, 0f, pan);
+            TryPlaySound(sound, volume, 0f, pan);
         }
+    }
+
+    private void TryPlaySound(SoundEffect? sound, float volume, float pitch, float pan)
+    {
+        if (!_audioAvailable || sound is null)
+        {
+            return;
+        }
+
+        try
+        {
+            sound.Play(volume, pitch, pan);
+        }
+        catch (Exception ex)
+        {
+            DisableAudio("playing sound", ex);
+        }
+    }
+
+    private void DisableAudio(string reason, Exception ex)
+    {
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
+        _audioAvailable = false;
+        StopMenuMusic();
+        StopFaucetMusic();
+        StopIngameMusic();
+        _menuMusicInstance?.Dispose();
+        _menuMusicInstance = null;
+        _menuMusic?.Dispose();
+        _menuMusic = null;
+        _faucetMusicInstance?.Dispose();
+        _faucetMusicInstance = null;
+        _faucetMusic?.Dispose();
+        _faucetMusic = null;
+        _ingameMusicInstance?.Dispose();
+        _ingameMusicInstance = null;
+        _ingameMusic?.Dispose();
+        _ingameMusic = null;
+        AddConsoleLine($"audio disabled: {reason} ({ex.GetType().Name}: {ex.Message})");
     }
 }

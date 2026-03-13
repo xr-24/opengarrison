@@ -24,11 +24,11 @@ public partial class Game1
         return true;
     }
 
-    private bool TryUpdateNonGameplayFrame(KeyboardState keyboard, MouseState mouse)
+    private bool TryUpdateNonGameplayFrame(GameTime gameTime, KeyboardState keyboard, MouseState mouse, int clientTicks)
     {
         if (_startupSplashOpen)
         {
-            UpdateStartupSplash(keyboard, mouse);
+            AdvanceStartupSplashTicks(clientTicks, keyboard, mouse);
             _world.SetLocalInput(default);
             _previousKeyboard = keyboard;
             _previousMouse = mouse;
@@ -41,6 +41,7 @@ public partial class Game1
             return false;
         }
 
+        AdvanceMenuClientTicks(clientTicks);
         UpdateMenuState(keyboard, mouse);
         if (_networkClient.IsConnected)
         {
@@ -54,17 +55,23 @@ public partial class Game1
         return true;
     }
 
-    private void UpdateGameplayFrame(GameTime gameTime, KeyboardState keyboard, MouseState mouse)
+    private void UpdateGameplayFrame(GameTime gameTime, KeyboardState keyboard, MouseState mouse, int clientTicks)
     {
+        if (_networkClient.IsConnected)
+        {
+            ProcessNetworkMessages();
+        }
+
         UpdateGameplayScreenState(keyboard);
         UpdateGameplayMenuState(keyboard, mouse);
         var cameraPosition = GetCameraTopLeft(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, mouse.X, mouse.Y);
         var (gameplayInput, networkInput) = BuildGameplayInputs(keyboard, mouse, cameraPosition);
+        CapturePendingPredictedInputEdges(keyboard, mouse, networkInput);
         _world.SetLocalInput(gameplayInput);
         UpdateBubbleMenuState(keyboard);
         UpdateScoreboardState(keyboard);
         AdvanceGameplaySimulation(gameTime, networkInput);
-        UpdateGameplayPresentation(gameTime, mouse);
+        UpdateGameplayPresentation(gameTime, mouse, clientTicks);
         UpdateGameplayWindowState();
         FinalizeGameplayFrame(keyboard, mouse);
     }
@@ -96,8 +103,22 @@ public partial class Game1
         var viewportHeight = _graphics.PreferredBackBufferHeight;
         var mouse = Mouse.GetState();
         UpdateInterpolatedWorldState();
+        UpdateLocalPredictedRenderPosition();
         var cameraPosition = GetCameraTopLeft(viewportWidth, viewportHeight, mouse.X, mouse.Y);
+        PrepareDeathCamCaptureIfNeeded(viewportWidth, viewportHeight);
 
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: RasterizerState.CullNone);
+        if (!DrawDeathCamCaptureOverlay(viewportWidth, viewportHeight))
+        {
+            DrawGameplayWorldForCamera(cameraPosition, viewportWidth, viewportHeight);
+        }
+        DrawGameplayHudLayers(mouse, cameraPosition);
+        DrawGameplayModalOverlays(mouse);
+        _spriteBatch.End();
+    }
+
+    private void DrawGameplayWorldForCamera(Vector2 cameraPosition, int viewportWidth, int viewportHeight)
+    {
         var worldRectangle = new Rectangle(
             (int)-cameraPosition.X,
             (int)-cameraPosition.Y,
@@ -120,10 +141,6 @@ public partial class Game1
             16,
             16);
 
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: RasterizerState.CullNone);
         DrawGameplayWorld(cameraPosition, worldRectangle, playerRectangle, centerLine, centerColumn, worldTopBorder, worldBottomBorder, worldLeftBorder, worldRightBorder, spawnRectangle);
-        DrawGameplayHudLayers(mouse, cameraPosition);
-        DrawGameplayModalOverlays(mouse);
-        _spriteBatch.End();
     }
 }

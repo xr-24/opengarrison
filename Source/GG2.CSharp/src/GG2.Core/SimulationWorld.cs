@@ -17,6 +17,7 @@ public sealed partial class SimulationWorld
     private const int ArenaPointCapTimeTicksDefault = 300;
     private const int ArenaPointUnlockTicksDefault = 1800;
     private const int PendingMapChangeTicks = 300;
+    private const string ClassChangeKillFeedSuffix = " bid farewell, cruel world!";
     private const int CombatTraceLifetimeTicks = 3;
     private const int KillFeedLifetimeTicks = 150;
     private const int DefaultGibLevel = 3;
@@ -216,6 +217,16 @@ public sealed partial class SimulationWorld
 
     public int ArenaBluePlayerCount => CountPlayers(PlayerTeam.Blue);
 
+    public bool IsPlayerHumiliated(PlayerEntity player)
+    {
+        if (!MatchState.IsEnded)
+        {
+            return false;
+        }
+
+        return !MatchState.WinnerTeam.HasValue || player.Team != MatchState.WinnerTeam.Value;
+    }
+
     public IReadOnlyList<ControlPointState> ControlPoints => _controlPoints;
 
     public bool ControlPointSetupActive => _controlPointSetupMode && _controlPointSetupTicksRemaining > 0;
@@ -304,10 +315,7 @@ public sealed partial class SimulationWorld
             return false;
         }
 
-        TrySetNetworkPlayerClassDefinition(LocalPlayerSlot, definition);
-        LocalPlayer.SetClassDefinition(definition);
-        TryForceRespawnNetworkPlayer(LocalPlayerSlot);
-        return true;
+        return TryApplyNetworkPlayerClassChange(LocalPlayerSlot, definition);
     }
 
     public bool TrySetEnemyClass(PlayerClass playerClass)

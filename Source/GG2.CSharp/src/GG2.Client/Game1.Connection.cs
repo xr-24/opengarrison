@@ -118,16 +118,24 @@ public partial class Game1
         if (_networkClient.Connect(host, port, _world.LocalPlayer.DisplayName, out var error))
         {
             RecordRecentConnection(host, port);
+            ResetClientTimingState();
             _lastAppliedSnapshotFrame = 0;
             _hasReceivedSnapshot = false;
             _lastSnapshotReceivedTimeSeconds = -1d;
+            _latestSnapshotServerTimeSeconds = -1d;
+            _latestSnapshotReceivedClockSeconds = -1d;
             _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+            _smoothedSnapshotJitterSeconds = 0f;
             _pendingNetworkVisualEvents.Clear();
             _hasPredictedLocalPlayerPosition = false;
             _hasSmoothedLocalPlayerRenderPosition = false;
             _pendingPredictedInputs.Clear();
+            _localPlayerSnapshotEntityId = null;
             _entityInterpolationTracks.Clear();
             _intelInterpolationTracks.Clear();
+            _entitySnapshotHistories.Clear();
+            _intelSnapshotHistories.Clear();
+            _remotePlayerSnapshotHistories.Clear();
             _interpolatedEntityPositions.Clear();
             _interpolatedIntelPositions.Clear();
             CloseLobbyBrowser(clearStatus: false);
@@ -152,6 +160,7 @@ public partial class Game1
     private void ReturnToMainMenu(string? statusMessage = null)
     {
         _networkClient.Disconnect();
+        ResetClientTimingState();
         StopHostedServer();
         _pendingHostedConnectTicks = -1;
         _pendingHostedConnectPort = 8190;
@@ -180,6 +189,7 @@ public partial class Game1
         _passwordPromptOpen = false;
         _passwordEditBuffer = string.Empty;
         _passwordPromptMessage = string.Empty;
+        _localPlayerSnapshotEntityId = null;
         _menuStatusMessage = statusMessage ?? string.Empty;
         _autoBalanceNoticeText = string.Empty;
         _autoBalanceNoticeTicks = 0;

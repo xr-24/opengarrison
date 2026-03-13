@@ -38,7 +38,7 @@ public partial class Game1
             return;
         }
 
-        if (_world.MatchState.IsEnded && _world.MatchState.WinnerTeam.HasValue && _world.MatchState.WinnerTeam.Value != player.Team)
+        if (_world.IsPlayerHumiliated(player))
         {
             BeginClosingBuildMenu();
             AdvanceBuildMenuAnimation();
@@ -152,12 +152,12 @@ public partial class Game1
         {
             if (_buildMenuAlpha < 0.99f)
             {
-                _buildMenuAlpha = MathF.Min(0.99f, MathF.Pow(MathF.Max(_buildMenuAlpha, 0.01f), 0.7f));
+                _buildMenuAlpha = AdvanceOpeningAlpha(_buildMenuAlpha, 0.01f, 0.99f);
             }
 
             if (_buildMenuX < 37f)
             {
-                _buildMenuX = MathF.Min(37f, _buildMenuX + 15f);
+                _buildMenuX = MathF.Min(37f, _buildMenuX + ScaleLegacyUiDistance(15f));
             }
 
             return;
@@ -165,10 +165,10 @@ public partial class Game1
 
         if (_buildMenuAlpha > 0.01f)
         {
-            _buildMenuAlpha = MathF.Max(0.01f, MathF.Pow(_buildMenuAlpha, 1f / 0.7f));
+            _buildMenuAlpha = AdvanceClosingAlpha(_buildMenuAlpha, 0.01f);
         }
 
-        _buildMenuX -= 15f;
+        _buildMenuX -= ScaleLegacyUiDistance(15f);
         if (_buildMenuX < -37f)
         {
             _buildMenuOpen = false;

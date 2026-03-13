@@ -57,7 +57,9 @@ public partial class Game1
                 var frameIndex = Math.Clamp(5, 0, sprite.Frames.Count - 1);
                 _spriteBatch.Draw(
                     sprite.Frames[frameIndex],
-                    new Vector2(renderPosition.X - cameraPosition.X, renderPosition.Y - cameraPosition.Y),
+                    new Vector2(
+                        renderPosition.X - cameraPosition.X + GetPlayerSpriteOffset(deadBody.ClassId).X,
+                        renderPosition.Y - cameraPosition.Y + GetPlayerSpriteOffset(deadBody.ClassId).Y),
                     null,
                     Color.White,
                     0f,
@@ -99,7 +101,10 @@ public partial class Game1
                 ? GetTauntSpriteFrameIndex(player, sprite.Frames.Count)
                 : GetPlayerSpriteFrameIndex(player, sprite.Frames.Count);
         var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
-        var position = new Vector2(renderPosition.X - cameraPosition.X, renderPosition.Y - cameraPosition.Y);
+        var spriteOffset = GetPlayerSpriteOffset(player.ClassId);
+        var position = new Vector2(
+            renderPosition.X - cameraPosition.X + spriteOffset.X,
+            renderPosition.Y - cameraPosition.Y + spriteOffset.Y);
         _spriteBatch.Draw(
             sprite.Frames[frameIndex],
             position,
@@ -138,7 +143,7 @@ public partial class Game1
             return Math.Clamp(deadFrame, 0, frameCount - 1);
         }
 
-        var animationImage = _playerAnimationImages.GetValueOrDefault(player.Id, 0f);
+        var animationImage = _playerAnimationImages.GetValueOrDefault(GetPlayerStateKey(player), 0f);
         var animationOffset = player.IsCarryingIntel ? intelOffset : normalOffset;
         return Math.Clamp((int)MathF.Floor(animationImage + animationOffset), 0, frameCount - 1);
     }
@@ -188,8 +193,9 @@ public partial class Game1
         var rotation = GetWeaponRotation(player);
         var leftFacingNudge = GetLeftFacingWeaponNudge(player, facingScale);
         var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
-        var drawX = renderPosition.X + (xOffset + sprite.Origin.X) * facingScale + leftFacingNudge;
-        var drawY = renderPosition.Y + yOffset + sprite.Origin.Y;
+        var spriteOffset = GetPlayerSpriteOffset(player.ClassId);
+        var drawX = renderPosition.X + spriteOffset.X + (xOffset + sprite.Origin.X) * facingScale + leftFacingNudge;
+        var drawY = renderPosition.Y + spriteOffset.Y + yOffset + sprite.Origin.Y;
         var position = new Vector2(drawX - cameraPosition.X, drawY - cameraPosition.Y);
         var scale = new Vector2(facingScale, 1f);
         _spriteBatch.Draw(
@@ -219,6 +225,11 @@ public partial class Game1
         return true;
     }
 
+    private static Vector2 GetPlayerSpriteOffset(PlayerClass classId)
+    {
+        return classId == PlayerClass.Quote ? new Vector2(0f, 12f) : Vector2.Zero;
+    }
+
     private static (string? SpriteName, float XOffset, float YOffset) GetWeaponSpriteInfo(PlayerEntity player)
     {
         return player.ClassId switch
@@ -245,7 +256,7 @@ public partial class Game1
             return Math.Clamp(teamFrame + 2, 0, frameCount - 1);
         }
 
-        var flashOffset = _playerWeaponFlashTicks.GetValueOrDefault(player.Id, 0) > 0 ? 2 : 0;
+        var flashOffset = _playerWeaponFlashTicks.GetValueOrDefault(GetPlayerStateKey(player), 0) > 0 ? 2 : 0;
         return Math.Clamp(teamFrame + flashOffset, 0, frameCount - 1);
     }
 

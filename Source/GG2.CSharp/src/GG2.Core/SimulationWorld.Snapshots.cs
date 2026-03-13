@@ -32,7 +32,8 @@ public sealed partial class SimulationWorld
                 snapshot.LocalDeathCam.KillerTeam == 0 ? null : (PlayerTeam)snapshot.LocalDeathCam.KillerTeam,
                 snapshot.LocalDeathCam.Health,
                 snapshot.LocalDeathCam.MaxHealth,
-                snapshot.LocalDeathCam.RemainingTicks);
+                snapshot.LocalDeathCam.RemainingTicks,
+                snapshot.LocalDeathCam.InitialTicks);
         RedCaps = snapshot.RedCaps;
         BlueCaps = snapshot.BlueCaps;
         SpectatorCount = Math.Max(0, snapshot.SpectatorCount);
@@ -49,7 +50,8 @@ public sealed partial class SimulationWorld
                 (PlayerTeam)entry.KillerTeam,
                 entry.WeaponSpriteName,
                 entry.VictimName,
-                (PlayerTeam)entry.VictimTeam));
+                (PlayerTeam)entry.VictimTeam,
+                entry.MessageText));
         }
         _killFeedTrimTicks = _killFeed.Count > 0 ? KillFeedLifetimeTicks : 0;
 

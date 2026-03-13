@@ -62,7 +62,12 @@ public partial class Game1
     private void DrawChatHud()
     {
         var baseX = 18f;
-        var baseY = _graphics.PreferredBackBufferHeight - 160f;
+        var promptRectangle = new Rectangle(
+            12,
+            _graphics.PreferredBackBufferHeight - 118,
+            Math.Max(280, _graphics.PreferredBackBufferWidth / 3),
+            24);
+        var baseY = promptRectangle.Y - 14f - Math.Max(0, (_chatLines.Count - 1) * 18f);
         for (var index = 0; index < _chatLines.Count; index += 1)
         {
             var line = _chatLines[index];
@@ -75,7 +80,6 @@ public partial class Game1
             return;
         }
 
-        var promptRectangle = new Rectangle(12, _graphics.PreferredBackBufferHeight - 58, Math.Max(280, _graphics.PreferredBackBufferWidth / 3), 24);
         _spriteBatch.Draw(_pixel, promptRectangle, new Color(8, 10, 12, 200));
         _spriteBatch.DrawString(_consoleFont, $"> {_chatInput}_", new Vector2(promptRectangle.X + 8, promptRectangle.Y + 3), new Color(255, 245, 210));
     }

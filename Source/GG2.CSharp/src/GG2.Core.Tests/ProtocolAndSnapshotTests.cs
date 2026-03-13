@@ -78,6 +78,9 @@ public sealed class ProtocolAndSnapshotTests
         Assert.Equal(snapshot.VisualEvents[0].X, decodedSnapshot.VisualEvents[0].X);
         Assert.Equal(snapshot.VisualEvents[0].EventId, decodedSnapshot.VisualEvents[0].EventId);
         Assert.Equal(snapshot.SoundEvents[0].EventId, decodedSnapshot.SoundEvents[0].EventId);
+        Assert.NotNull(decodedSnapshot.LocalDeathCam);
+        Assert.Equal(snapshot.LocalDeathCam!.InitialTicks, decodedSnapshot.LocalDeathCam!.InitialTicks);
+        Assert.Equal(snapshot.KillFeed[1].MessageText, decodedSnapshot.KillFeed[1].MessageText);
         Assert.True(decodedSnapshot.CombatTraces[0].IsSniperTracer);
         Assert.Equal(snapshot.ControlPoints.Count, decodedSnapshot.ControlPoints.Count);
         Assert.Equal(snapshot.Generators.Count, decodedSnapshot.Generators.Count);
@@ -183,7 +186,8 @@ public sealed class ProtocolAndSnapshotTests
         Assert.True(world.CombatTraces[0].IsSniperTracer);
         Assert.Single(world.PendingSoundEvents);
         Assert.Equal(701UL, world.PendingSoundEvents[0].EventId);
-        Assert.Single(world.KillFeed);
+        Assert.Equal(2, world.KillFeed.Count);
+        Assert.Equal("RemoteBlue bid farewell, cruel world!", world.KillFeed[1].MessageText);
     }
 
     [Fact]
@@ -560,7 +564,16 @@ public sealed class ProtocolAndSnapshotTests
                 new SnapshotGeneratorState((byte)PlayerTeam.Red, 4000, 4000),
                 new SnapshotGeneratorState((byte)PlayerTeam.Blue, 2800, 4000),
             ],
-            LocalDeathCam: null,
+            LocalDeathCam: new SnapshotDeathCamState(
+                FocusX: 450f,
+                FocusY: 280f,
+                KillMessage: "You were killed by",
+                KillerName: "RemoteBlue",
+                KillerTeam: (byte)PlayerTeam.Blue,
+                Health: 75,
+                MaxHealth: 120,
+                RemainingTicks: 90,
+                InitialTicks: 150),
             KillFeed:
             [
                 new SnapshotKillFeedEntry(
@@ -569,6 +582,13 @@ public sealed class ProtocolAndSnapshotTests
                     WeaponSpriteName: "RocketlauncherS",
                     VictimName: "RemoteBlue",
                     VictimTeam: (byte)PlayerTeam.Blue),
+                new SnapshotKillFeedEntry(
+                    KillerName: string.Empty,
+                    KillerTeam: (byte)PlayerTeam.Blue,
+                    WeaponSpriteName: "DeadS",
+                    VictimName: "RemoteBlue",
+                    VictimTeam: (byte)PlayerTeam.Blue,
+                    MessageText: "RemoteBlue bid farewell, cruel world!"),
             ],
             VisualEvents:
             [

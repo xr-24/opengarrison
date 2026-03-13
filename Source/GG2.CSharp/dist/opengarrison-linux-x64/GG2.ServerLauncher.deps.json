@@ -784,6 +784,14 @@
           }
         }
       },
+      "SixLabors.ImageSharp/3.1.7": {
+        "runtime": {
+          "lib/net6.0/SixLabors.ImageSharp.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.1.7.0"
+          }
+        }
+      },
       "System.Drawing.Common/8.0.0": {
         "dependencies": {
           "Microsoft.Win32.SystemEvents": "8.0.0"
@@ -814,6 +822,7 @@
       "GG2.Core/1.0.0": {
         "dependencies": {
           "GG2.Protocol": "1.0.0",
+          "SixLabors.ImageSharp": "3.1.7",
           "System.Drawing.Common": "8.0.0"
         },
         "runtime": {
@@ -885,6 +894,13 @@
       "sha512": "sha512-WYnil3DhQHzjCY0dM9I2B3r1vWip90AOuQd25KE4NrjPQBg0tBJFluRLm5YPnO5ZLDmwrfosY8jCQGQRmWI/Pg==",
       "path": "nvorbis/0.10.4",
       "hashPath": "nvorbis.0.10.4.nupkg.sha512"
+    },
+    "SixLabors.ImageSharp/3.1.7": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9fIOOAsyLFid6qKypM2Iy0Z3Q9yoanV8VoYAHtI2sYGMNKzhvRTjgFDHonIiVe+ANtxIxM6SuqUzj0r91nItpA==",
+      "path": "sixlabors.imagesharp/3.1.7",
+      "hashPath": "sixlabors.imagesharp.3.1.7.nupkg.sha512"
     },
     "System.Drawing.Common/8.0.0": {
       "type": "package",

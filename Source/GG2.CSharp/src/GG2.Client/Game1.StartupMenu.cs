@@ -21,7 +21,7 @@ public partial class Game1
         }
 
         var anyKeyPressed = keyboard.GetPressedKeys().Length > 0;
-        var leftClickPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton != ButtonState.Pressed;
+        var leftClickPressed = mouse.LeftButton == ButtonState.Pressed;
         if (_startupSplashTicks >= 240 || anyKeyPressed || leftClickPressed)
         {
             _startupSplashOpen = false;

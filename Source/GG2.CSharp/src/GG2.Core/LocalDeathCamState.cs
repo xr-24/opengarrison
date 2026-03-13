@@ -8,4 +8,5 @@ public sealed record LocalDeathCamState(
     PlayerTeam? KillerTeam,
     int Health,
     int MaxHealth,
-    int RemainingTicks);
+    int RemainingTicks,
+    int InitialTicks = 0);

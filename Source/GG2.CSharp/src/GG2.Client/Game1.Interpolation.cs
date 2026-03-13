@@ -10,15 +10,36 @@ namespace GG2.Client;
 
 public partial class Game1
 {
+    private const float RemotePlayerHistorySnapDistance = 64f;
+    private const float RemotePlayerCorrectionSnapDistance = 48f;
+
+    private int GetPlayerStateKey(PlayerEntity player)
+    {
+        if (ReferenceEquals(player, _world.LocalPlayer))
+        {
+            return _localPlayerSnapshotEntityId ?? player.Id;
+        }
+
+        return player.Id;
+    }
+
     private readonly Dictionary<int, Vector2> _interpolatedEntityPositions = new();
     private readonly Dictionary<PlayerTeam, Vector2> _interpolatedIntelPositions = new();
     private readonly Dictionary<int, InterpolationTrack> _entityInterpolationTracks = new();
     private readonly Dictionary<PlayerTeam, InterpolationTrack> _intelInterpolationTracks = new();
+    private readonly Dictionary<int, List<EntitySnapshotSample>> _entitySnapshotHistories = new();
+    private readonly Dictionary<PlayerTeam, List<EntitySnapshotSample>> _intelSnapshotHistories = new();
+    private readonly Dictionary<int, List<PlayerSnapshotSample>> _remotePlayerSnapshotHistories = new();
     private readonly Stopwatch _networkInterpolationClock = Stopwatch.StartNew();
     private double _networkInterpolationClockSeconds;
     private float _networkSnapshotInterpolationDurationSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
     private float _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+    private float _smoothedSnapshotJitterSeconds;
+    private float _remotePlayerInterpolationBackTimeSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
     private double _lastSnapshotReceivedTimeSeconds = -1d;
+    private double _latestSnapshotServerTimeSeconds = -1d;
+    private double _latestSnapshotReceivedClockSeconds = -1d;
+    private double _lastPredictedRenderSmoothingTimeSeconds = -1d;
     private bool _hasReceivedSnapshot;
     private ulong _lastAppliedSnapshotFrame;
 
@@ -46,7 +67,7 @@ public partial class Game1
 
         if (_networkClient.IsConnected && !ReferenceEquals(player, _world.LocalPlayer))
         {
-            return new Vector2(player.X, player.Y);
+            return GetRenderPosition(player.Id, player.X, player.Y, allowInterpolation);
         }
 
         return GetRenderPosition(player.Id, player.X, player.Y, allowInterpolation);
@@ -68,6 +89,21 @@ public partial class Game1
         double StartTimeSeconds,
         float DurationSeconds,
         Vector2 Velocity,
+        float ExtrapolationDurationSeconds,
+        float MaxExtrapolationDistance);
+
+    private readonly record struct PlayerSnapshotSample(
+        Vector2 Position,
+        Vector2 Velocity,
+        double TimeSeconds,
+        PlayerTeam Team,
+        PlayerClass ClassId,
+        bool IsAlive);
+
+    private readonly record struct EntitySnapshotSample(
+        Vector2 Position,
+        Vector2 Velocity,
+        double TimeSeconds,
         float ExtrapolationDurationSeconds,
         float MaxExtrapolationDistance);
 }

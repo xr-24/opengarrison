@@ -2,7 +2,15 @@ namespace GG2.Core;
 
 public sealed partial class SimulationWorld
 {
-    private void KillPlayer(PlayerEntity player, bool gibbed = false, PlayerEntity? killer = null, string? weaponSpriteName = null, string? deathCamMessage = null, SentryEntity? deathCamSentry = null)
+    private void KillPlayer(
+        PlayerEntity player,
+        bool gibbed = false,
+        PlayerEntity? killer = null,
+        string? weaponSpriteName = null,
+        string? deathCamMessage = null,
+        SentryEntity? deathCamSentry = null,
+        string? killFeedMessage = null,
+        bool createDeathCam = true)
     {
         player.AddDeath();
         if (killer is not null && !ReferenceEquals(killer, player))
@@ -31,14 +39,15 @@ public sealed partial class SimulationWorld
             RegisterWorldSoundEvent(_random.Next(2) == 0 ? "DeathSnd1" : "DeathSnd2", player.X, player.Y);
         }
 
-        RecordKillFeedEntry(player, killer, weaponSpriteName ?? "DeadS");
+        RecordKillFeedEntry(player, killer, weaponSpriteName ?? "DeadS", killFeedMessage);
         var respawnTicks = MatchRules.Mode == GameModeKind.Arena
             ? 0
             : player.IsInSpawnRoom
                 ? 1
                 : _configuredRespawnTicks;
+        var hasNetworkSlot = TryGetNetworkPlayerSlot(player, out var slot);
 
-        if (TryGetNetworkPlayerSlot(player, out var slot))
+        if (createDeathCam && hasNetworkSlot)
         {
             var deathCamTicks = Math.Clamp(respawnTicks > 0 ? respawnTicks : _configuredRespawnTicks, 1, 150);
             LocalDeathCamState deathCam;
@@ -52,6 +61,7 @@ public sealed partial class SimulationWorld
                     killer?.Team,
                     deathCamSentry.Health,
                     SentryEntity.MaxHealth,
+                    deathCamTicks,
                     deathCamTicks);
             }
             else if (killer is not null)
@@ -64,6 +74,7 @@ public sealed partial class SimulationWorld
                     killer.Team,
                     killer.Health,
                     killer.MaxHealth,
+                    deathCamTicks,
                     deathCamTicks);
             }
             else
@@ -76,6 +87,7 @@ public sealed partial class SimulationWorld
                     null,
                     0,
                     0,
+                    deathCamTicks,
                     deathCamTicks);
             }
 
@@ -84,7 +96,7 @@ public sealed partial class SimulationWorld
 
         RemoveOwnedSpyArtifacts(player.Id);
         player.Kill();
-        if (TryGetNetworkPlayerSlot(player, out slot))
+        if (hasNetworkSlot)
         {
             TrySetNetworkPlayerRespawnTicks(slot, respawnTicks);
         }
@@ -185,11 +197,11 @@ public sealed partial class SimulationWorld
         _killFeedTrimTicks = _killFeed.Count > 0 ? KillFeedLifetimeTicks : 0;
     }
 
-    private void RecordKillFeedEntry(PlayerEntity victim, PlayerEntity? killer, string weaponSpriteName)
+    private void RecordKillFeedEntry(PlayerEntity victim, PlayerEntity? killer, string weaponSpriteName, string? messageText = null)
     {
         var entry = killer is null
-            ? new KillFeedEntry(string.Empty, PlayerTeam.Red, weaponSpriteName, victim.DisplayName, victim.Team)
-            : new KillFeedEntry(killer.DisplayName, killer.Team, weaponSpriteName, victim.DisplayName, victim.Team);
+            ? new KillFeedEntry(string.Empty, victim.Team, weaponSpriteName, victim.DisplayName, victim.Team, messageText ?? string.Empty)
+            : new KillFeedEntry(killer.DisplayName, killer.Team, weaponSpriteName, victim.DisplayName, victim.Team, messageText ?? string.Empty);
         _killFeed.Add(entry);
         if (_killFeed.Count > 5)
         {

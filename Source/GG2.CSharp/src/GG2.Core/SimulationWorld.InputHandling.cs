@@ -31,6 +31,17 @@ public sealed partial class SimulationWorld
         PlayerTeam team,
         bool allowDebugKill)
     {
+        if (IsPlayerHumiliated(player))
+        {
+            input = input with
+            {
+                FirePrimary = false,
+                FireSecondary = false,
+                BuildSentry = false,
+                DestroySentry = false,
+            };
+        }
+
         var jumpPressed = input.Up && !previousInput.Up;
         var dropPressed = input.Down && !previousInput.Down;
         var buildPressed = input.BuildSentry && !previousInput.BuildSentry;

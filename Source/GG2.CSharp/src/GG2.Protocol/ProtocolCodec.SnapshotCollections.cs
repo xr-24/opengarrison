@@ -16,6 +16,7 @@ public static partial class ProtocolCodec
             WriteString(writer, entry.WeaponSpriteName, MaxAssetNameBytes, nameof(entry.WeaponSpriteName));
             WriteString(writer, entry.VictimName, MaxPlayerNameBytes, nameof(entry.VictimName));
             writer.Write(entry.VictimTeam);
+            WriteString(writer, entry.MessageText, MaxKillMessageBytes, nameof(entry.MessageText));
         }
     }
 
@@ -30,7 +31,8 @@ public static partial class ProtocolCodec
                 reader.ReadByte(),
                 ReadString(reader, MaxAssetNameBytes),
                 ReadString(reader, MaxPlayerNameBytes),
-                reader.ReadByte()));
+                reader.ReadByte(),
+                ReadString(reader, MaxKillMessageBytes)));
         }
 
         return killFeed;
@@ -135,6 +137,7 @@ public static partial class ProtocolCodec
         writer.Write(deathCam.Health);
         writer.Write(deathCam.MaxHealth);
         writer.Write(deathCam.RemainingTicks);
+        writer.Write(deathCam.InitialTicks);
     }
 
     private static SnapshotDeathCamState? ReadDeathCamState(BinaryReader reader)
@@ -150,6 +153,7 @@ public static partial class ProtocolCodec
             ReadString(reader, MaxKillMessageBytes),
             ReadString(reader, MaxPlayerNameBytes),
             reader.ReadByte(),
+            reader.ReadInt32(),
             reader.ReadInt32(),
             reader.ReadInt32(),
             reader.ReadInt32());

@@ -231,6 +231,23 @@ public partial class Game1
 
     private void DrawKillFeedEntry(KillFeedEntry entry, int viewportWidth, float y)
     {
+        if (!string.IsNullOrEmpty(entry.MessageText))
+        {
+            var messageWidth = _consoleFont.MeasureString(entry.MessageText).X;
+            var messageWeaponSprite = _runtimeAssets.GetSprite(entry.WeaponSpriteName);
+            var messageWeaponWidth = messageWeaponSprite?.Frames.Count > 0 ? messageWeaponSprite.Frames[0].Width : 0f;
+            var messageX = viewportWidth - messageWidth - 8f;
+            var iconCenterX = messageX - (messageWeaponWidth / 2f) - 4f;
+            if (messageWeaponSprite is not null && messageWeaponSprite.Frames.Count > 0)
+            {
+                var frameIndex = entry.KillerTeam == PlayerTeam.Blue ? 1 : 0;
+                DrawCenteredHudSprite(entry.WeaponSpriteName, frameIndex, new Vector2(iconCenterX, y + 2f), Color.White, Vector2.One);
+            }
+
+            _spriteBatch.DrawString(_consoleFont, entry.MessageText, new Vector2(messageX, y), GetKillFeedTextColor(entry.VictimTeam));
+            return;
+        }
+
         var killerWidth = string.IsNullOrEmpty(entry.KillerName) ? 0f : _consoleFont.MeasureString(entry.KillerName).X;
         var victimWidth = _consoleFont.MeasureString(entry.VictimName).X;
         var weaponSprite = _runtimeAssets.GetSprite(entry.WeaponSpriteName);

@@ -21,9 +21,8 @@ public partial class Game1
     private bool _hasPredictedLocalActionState;
     private PlayerInputSnapshot _latestPredictedLocalInput;
 
-    private void RecordPredictedInput(uint sequence, PlayerInputSnapshot input, bool jumpPressed)
+    private void RecordPredictedInput(uint sequence, PlayerInputSnapshot input, bool jumpPressed, bool secondaryPressed)
     {
-        var secondaryPressed = input.FireSecondary && !_latestPredictedLocalInput.FireSecondary;
         _latestPredictedLocalInput = input;
 
         if (!_networkClient.IsConnected || sequence == 0 || !_world.LocalPlayer.IsAlive || _world.LocalPlayerAwaitingJoin)

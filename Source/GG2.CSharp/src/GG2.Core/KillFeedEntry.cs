@@ -5,4 +5,5 @@ public sealed record KillFeedEntry(
     PlayerTeam KillerTeam,
     string WeaponSpriteName,
     string VictimName,
-    PlayerTeam VictimTeam);
+    PlayerTeam VictimTeam,
+    string MessageText = "");

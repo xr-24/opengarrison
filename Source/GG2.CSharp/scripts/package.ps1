@@ -99,6 +99,24 @@ function Copy-MinimalExeAssets {
     }
 }
 
+function Remove-LinuxBundledOpenAl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Platform,
+        [Parameter(Mandatory = $true)]
+        [string]$StagingRoot
+    )
+
+    if ($Platform -notlike "linux-*") {
+        return
+    }
+
+    $bundledOpenAlPath = Join-Path $StagingRoot "libopenal.so"
+    if (Test-Path $bundledOpenAlPath) {
+        Remove-Item $bundledOpenAlPath -Force
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 
 $packageArtifacts = @()
@@ -134,12 +152,6 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "dotnet test failed." }
     }
 
-    foreach ($platform in $restorePlatforms) {
-        Write-Host "Restoring solution for runtime $platform..."
-        dotnet restore GG2.sln -r $platform
-        if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $platform." }
-    }
-
     foreach ($platform in $Platforms) {
         $packageName = "opengarrison-$platform"
         $stagingRoot = Join-Path $OutputRoot $packageName
@@ -154,6 +166,10 @@ try {
         New-Item -ItemType Directory -Path (Join-Path $stagingRoot "config") | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $stagingRoot "Maps") | Out-Null
 
+        Write-Host "Restoring solution for runtime $platform..."
+        dotnet restore GG2.sln -r $platform
+        if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $platform." }
+
         Write-Host "Publishing packages for $platform..."
         dotnet publish .\src\GG2.Client\GG2.Client.csproj -c $Configuration -r $platform --self-contained true --no-restore -o $stagingRoot
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.Client failed on $platform." }
@@ -161,6 +177,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.ServerLauncher failed on $platform." }
         dotnet publish .\src\GG2.Server\GG2.Server.csproj -c $Configuration -r $platform --self-contained true --no-restore -o $stagingRoot
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish for GG2.Server failed on $platform." }
+
+        Remove-LinuxBundledOpenAl -Platform $platform -StagingRoot $stagingRoot
 
         New-Item -ItemType Directory -Force -Path (Join-Path $stagingRoot "Assets") | Out-Null
         New-Item -ItemType Directory -Force -Path (Join-Path $stagingRoot "config") | Out-Null

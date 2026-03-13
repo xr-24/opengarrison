@@ -15,17 +15,7 @@ public partial class Game1
         float y;
         if (_killCamEnabled && !_world.LocalPlayer.IsAlive && _world.LocalDeathCam is not null)
         {
-            var halfViewportWidth = viewportWidth / 2f;
-            var halfViewportHeight = viewportHeight / 2f;
-            x = Math.Clamp(
-                _world.LocalDeathCam.FocusX - halfViewportWidth,
-                0f,
-                Math.Max(0f, _world.Bounds.Width - viewportWidth));
-            y = Math.Clamp(
-                _world.LocalDeathCam.FocusY - halfViewportHeight,
-                0f,
-                Math.Max(0f, _world.Bounds.Height - viewportHeight));
-            return new Vector2(x, y);
+            return GetDeathCamCameraTopLeft(viewportWidth, viewportHeight);
         }
 
         var localViewPosition = GetLocalViewPosition();
@@ -55,7 +45,9 @@ public partial class Game1
                 Math.Max(0f, _world.Bounds.Height - viewportHeight));
         }
 
-        return new Vector2(x, y);
+        var cameraTopLeft = new Vector2(x, y);
+        TrackLiveCamera(cameraTopLeft);
+        return cameraTopLeft;
     }
 
     private Vector2 GetLocalViewPosition()
@@ -226,7 +218,7 @@ public partial class Game1
 
     private PlayerEntity? FindPlayerById(int playerId)
     {
-        if (_world.LocalPlayer.Id == playerId)
+        if ((_localPlayerSnapshotEntityId ?? _world.LocalPlayer.Id) == playerId)
         {
             return _world.LocalPlayer;
         }

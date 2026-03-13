@@ -335,7 +335,8 @@ public sealed record SnapshotDeathCamState(
     byte KillerTeam,
     int Health,
     int MaxHealth,
-    int RemainingTicks);
+    int RemainingTicks,
+    int InitialTicks = 0);
 
 public sealed record SnapshotCombatTraceState(
     float StartX,
@@ -366,7 +367,8 @@ public sealed record SnapshotKillFeedEntry(
     byte KillerTeam,
     string WeaponSpriteName,
     string VictimName,
-    byte VictimTeam);
+    byte VictimTeam,
+    string MessageText = "");
 
 public sealed record SnapshotMessage(
     ulong Frame,

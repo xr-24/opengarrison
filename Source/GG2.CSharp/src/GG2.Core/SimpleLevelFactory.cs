@@ -53,7 +53,7 @@ public static class SimpleLevelFactory
             }
 
             var importedSolidsPath = levelSpec.CollisionMaskSourcePath;
-            importedSolids = !OperatingSystem.IsWindows() || importedSolidsPath is null
+            importedSolids = importedSolidsPath is null
                 ? []
                 : GameMakerCollisionMaskImporter.Import(importedSolidsPath, importedRoom.Bounds);
         }

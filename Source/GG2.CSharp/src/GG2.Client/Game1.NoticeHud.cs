@@ -102,8 +102,13 @@ public partial class Game1
     private void ShowNotice(NoticeKind kind)
     {
         _notice = new NoticeState(kind, 0.1f, false, 200);
+        if (!_audioAvailable)
+        {
+            return;
+        }
+
         var sound = _runtimeAssets.GetSound("NoticeSnd");
-        sound?.Play(0.9f, 0f, 0f);
+        TryPlaySound(sound, 0.9f, 0f, 0f);
     }
 
     private static string GetNoticeText(NoticeKind kind)
