@@ -102,8 +102,6 @@ public partial class Game1
         var viewportWidth = _graphics.PreferredBackBufferWidth;
         var viewportHeight = _graphics.PreferredBackBufferHeight;
         var mouse = Mouse.GetState();
-        UpdateInterpolatedWorldState();
-        UpdateLocalPredictedRenderPosition();
         var cameraPosition = GetCameraTopLeft(viewportWidth, viewportHeight, mouse.X, mouse.Y);
         PrepareDeathCamCaptureIfNeeded(viewportWidth, viewportHeight);
 

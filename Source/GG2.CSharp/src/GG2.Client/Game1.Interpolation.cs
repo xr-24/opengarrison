@@ -16,6 +16,7 @@ public partial class Game1
     private const float RemotePlayerExtrapolationDurationSeconds = 0.05f;
     private const float RemotePlayerMinimumInterpolationBackTimeSeconds = 0.12f;
     private const float RemotePlayerMaximumInterpolationBackTimeSeconds = 0.22f;
+    private const float SnapshotHistoryRetentionSeconds = 0.5f;
 
     private int GetPlayerStateKey(PlayerEntity player)
     {
@@ -42,11 +43,14 @@ public partial class Game1
     private float _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
     private float _smoothedSnapshotJitterSeconds;
     private float _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
+    private double _remotePlayerRenderTimeSeconds;
+    private double _lastRemotePlayerRenderTimeClockSeconds = -1d;
     private double _lastSnapshotReceivedTimeSeconds = -1d;
     private double _latestSnapshotServerTimeSeconds = -1d;
     private double _latestSnapshotReceivedClockSeconds = -1d;
     private double _lastPredictedRenderSmoothingTimeSeconds = -1d;
     private bool _hasReceivedSnapshot;
+    private bool _hasRemotePlayerRenderTime;
     private ulong _lastAppliedSnapshotFrame;
 
     private Vector2 GetRenderPosition(int entityId, float x, float y, bool allowInterpolation = true)

@@ -127,6 +127,9 @@ public partial class Game1
             _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
             _smoothedSnapshotJitterSeconds = 0f;
             _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
+            _remotePlayerRenderTimeSeconds = 0d;
+            _lastRemotePlayerRenderTimeClockSeconds = -1d;
+            _hasRemotePlayerRenderTime = false;
             _pendingNetworkVisualEvents.Clear();
             _hasPredictedLocalPlayerPosition = false;
             _hasSmoothedLocalPlayerRenderPosition = false;

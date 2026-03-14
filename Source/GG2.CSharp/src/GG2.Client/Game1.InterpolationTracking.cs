@@ -29,6 +29,9 @@ public partial class Game1
             _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
             _smoothedSnapshotJitterSeconds = 0f;
             _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
+            _remotePlayerRenderTimeSeconds = 0d;
+            _lastRemotePlayerRenderTimeClockSeconds = -1d;
+            _hasRemotePlayerRenderTime = false;
             _pendingNetworkVisualEvents.Clear();
             _processedNetworkSoundEventIds.Clear();
             _processedNetworkSoundEventOrder.Clear();
@@ -41,72 +44,74 @@ public partial class Game1
         }
 
         var activeEntityIds = new HashSet<int>();
+        var remotePlayerRenderTimeSeconds = GetRemotePlayerRenderTimeSeconds();
+        var entityRenderTimeSeconds = GetEntityRenderTimeSeconds();
         var localPlayerStateKey = GetPlayerStateKey(_world.LocalPlayer);
         _interpolatedEntityPositions[localPlayerStateKey] = new Vector2(_world.LocalPlayer.X, _world.LocalPlayer.Y);
         activeEntityIds.Add(localPlayerStateKey);
         foreach (var player in EnumerateRemotePlayersForView())
         {
-            UpdateInterpolatedRemotePlayerPosition(player);
+            UpdateInterpolatedRemotePlayerPosition(player, remotePlayerRenderTimeSeconds);
             activeEntityIds.Add(player.Id);
         }
 
         foreach (var deadBody in _world.DeadBodies)
         {
-            UpdateInterpolatedEntityPosition(deadBody.Id, deadBody.X, deadBody.Y);
+            UpdateInterpolatedEntityPosition(deadBody.Id, deadBody.X, deadBody.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(deadBody.Id);
         }
 
         foreach (var sentry in _world.Sentries)
         {
-            UpdateInterpolatedEntityPosition(sentry.Id, sentry.X, sentry.Y);
+            UpdateInterpolatedEntityPosition(sentry.Id, sentry.X, sentry.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(sentry.Id);
         }
 
         foreach (var shot in _world.Shots)
         {
-            UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y);
+            UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(shot.Id);
         }
 
         foreach (var shot in _world.RevolverShots)
         {
-            UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y);
+            UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(shot.Id);
         }
 
         foreach (var needle in _world.Needles)
         {
-            UpdateInterpolatedEntityPosition(needle.Id, needle.X, needle.Y);
+            UpdateInterpolatedEntityPosition(needle.Id, needle.X, needle.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(needle.Id);
         }
 
         foreach (var flame in _world.Flames)
         {
-            UpdateInterpolatedEntityPosition(flame.Id, flame.X, flame.Y);
+            UpdateInterpolatedEntityPosition(flame.Id, flame.X, flame.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(flame.Id);
         }
 
         foreach (var rocket in _world.Rockets)
         {
-            UpdateInterpolatedEntityPosition(rocket.Id, rocket.X, rocket.Y);
+            UpdateInterpolatedEntityPosition(rocket.Id, rocket.X, rocket.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(rocket.Id);
         }
 
         foreach (var mine in _world.Mines)
         {
-            UpdateInterpolatedEntityPosition(mine.Id, mine.X, mine.Y);
+            UpdateInterpolatedEntityPosition(mine.Id, mine.X, mine.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(mine.Id);
         }
 
         foreach (var gib in _world.PlayerGibs)
         {
-            UpdateInterpolatedEntityPosition(gib.Id, gib.X, gib.Y);
+            UpdateInterpolatedEntityPosition(gib.Id, gib.X, gib.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(gib.Id);
         }
 
         foreach (var bloodDrop in _world.BloodDrops)
         {
-            UpdateInterpolatedEntityPosition(bloodDrop.Id, bloodDrop.X, bloodDrop.Y);
+            UpdateInterpolatedEntityPosition(bloodDrop.Id, bloodDrop.X, bloodDrop.Y, entityRenderTimeSeconds);
             activeEntityIds.Add(bloodDrop.Id);
         }
 
@@ -127,15 +132,15 @@ public partial class Game1
             _remotePlayerSnapshotHistories.Remove(entityId);
         }
 
-        UpdateInterpolatedIntelPosition(_world.RedIntel);
-        UpdateInterpolatedIntelPosition(_world.BlueIntel);
+        UpdateInterpolatedIntelPosition(_world.RedIntel, entityRenderTimeSeconds);
+        UpdateInterpolatedIntelPosition(_world.BlueIntel, entityRenderTimeSeconds);
     }
 
-    private void UpdateInterpolatedEntityPosition(int entityId, float x, float y)
+    private void UpdateInterpolatedEntityPosition(int entityId, float x, float y, double renderTimeSeconds)
     {
         if (_entitySnapshotHistories.TryGetValue(entityId, out var history) && history.Count > 0)
         {
-            _interpolatedEntityPositions[entityId] = EvaluateEntitySnapshotHistory(history, GetEntityRenderTimeSeconds());
+            _interpolatedEntityPositions[entityId] = EvaluateEntitySnapshotHistory(history, renderTimeSeconds);
             return;
         }
 
@@ -148,11 +153,11 @@ public partial class Game1
         _interpolatedEntityPositions[entityId] = EvaluateInterpolationTrack(track);
     }
 
-    private void UpdateInterpolatedIntelPosition(TeamIntelligenceState intelState)
+    private void UpdateInterpolatedIntelPosition(TeamIntelligenceState intelState, double renderTimeSeconds)
     {
         if (_intelSnapshotHistories.TryGetValue(intelState.Team, out var history) && history.Count > 0)
         {
-            _interpolatedIntelPositions[intelState.Team] = EvaluateEntitySnapshotHistory(history, GetEntityRenderTimeSeconds());
+            _interpolatedIntelPositions[intelState.Team] = EvaluateEntitySnapshotHistory(history, renderTimeSeconds);
             return;
         }
 
@@ -281,7 +286,7 @@ public partial class Game1
         CaptureEntityInterpolationTarget(isActive, entityId, x, y, Vector2.Zero, 0f, 0f, _latestSnapshotServerTimeSeconds);
     }
 
-    private void UpdateInterpolatedRemotePlayerPosition(PlayerEntity player)
+    private void UpdateInterpolatedRemotePlayerPosition(PlayerEntity player, double renderTimeSeconds)
     {
         if (!_remotePlayerSnapshotHistories.TryGetValue(player.Id, out var history) || history.Count == 0)
         {
@@ -289,7 +294,6 @@ public partial class Game1
             return;
         }
 
-        var renderTimeSeconds = GetRemotePlayerRenderTimeSeconds();
         if (history.Count == 1)
         {
             _interpolatedEntityPositions[player.Id] = EvaluateRemotePlayerExtrapolation(history[0], renderTimeSeconds);
@@ -359,7 +363,7 @@ public partial class Game1
             }
         }
 
-        var minHistoryTimeSeconds = snapshotTimeSeconds - 0.25d;
+        var minHistoryTimeSeconds = snapshotTimeSeconds - SnapshotHistoryRetentionSeconds;
         while (history.Count > 2 && history[1].TimeSeconds < minHistoryTimeSeconds)
         {
             history.RemoveAt(0);
@@ -452,7 +456,25 @@ public partial class Game1
 
     private double GetRemotePlayerRenderTimeSeconds()
     {
-        return GetSnapshotRenderTimeSeconds(_remotePlayerInterpolationBackTimeSeconds);
+        var targetRenderTimeSeconds = GetSnapshotRenderTimeSeconds(_remotePlayerInterpolationBackTimeSeconds);
+        if (!_hasRemotePlayerRenderTime)
+        {
+            _remotePlayerRenderTimeSeconds = targetRenderTimeSeconds;
+            _lastRemotePlayerRenderTimeClockSeconds = _networkInterpolationClockSeconds;
+            _hasRemotePlayerRenderTime = true;
+            return _remotePlayerRenderTimeSeconds;
+        }
+
+        var deltaSeconds = Math.Clamp(
+            _networkInterpolationClockSeconds - _lastRemotePlayerRenderTimeClockSeconds,
+            0d,
+            0.05d);
+        _lastRemotePlayerRenderTimeClockSeconds = _networkInterpolationClockSeconds;
+        _remotePlayerRenderTimeSeconds = NetworkInterpolationTimeline.AdvanceTowards(
+            _remotePlayerRenderTimeSeconds,
+            targetRenderTimeSeconds,
+            deltaSeconds);
+        return _remotePlayerRenderTimeSeconds;
     }
 
     private static double GetSnapshotTimelineTimeSeconds(ulong snapshotFrame, int tickRate)
@@ -591,7 +613,7 @@ public partial class Game1
             history.Add(sample);
         }
 
-        var minHistoryTimeSeconds = snapshotTimeSeconds - 0.25d;
+        var minHistoryTimeSeconds = snapshotTimeSeconds - SnapshotHistoryRetentionSeconds;
         while (history.Count > 2 && history[1].TimeSeconds < minHistoryTimeSeconds)
         {
             history.RemoveAt(0);
