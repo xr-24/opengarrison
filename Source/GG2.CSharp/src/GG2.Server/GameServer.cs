@@ -256,17 +256,17 @@ sealed class GameServer
                 var elapsedSeconds = (now - _previous).TotalSeconds;
                 _previous = now;
 
-                var ticks = _simulator.Step(elapsedSeconds);
+                var ticks = _simulator.Step(elapsedSeconds, () =>
+                {
+                    _autoBalancer.Tick(now, 1, _autoBalanceEnabled);
+                    if (_mapRotationManager.TryApplyPendingMapChange())
+                    {
+                        _snapshotBroadcaster.ResetTransientEvents();
+                    }
+
+                    _snapshotBroadcaster.BroadcastSnapshot();
+                });
                 _lobbyRegistrar?.Tick(now, BuildLobbyServerName(_serverName, _world, _clientsBySlot, _passwordRequired, _maxPlayableClients));
-                if (ticks > 0)
-                {
-                    _autoBalancer.Tick(now, ticks, _autoBalanceEnabled);
-                }
-                if (_mapRotationManager.TryApplyPendingMapChange())
-                {
-                    _snapshotBroadcaster.ResetTransientEvents();
-                }
-                _snapshotBroadcaster.BroadcastSnapshots(ticks);
 
                 if (ticks > 0 && _world.Frame % _config.TicksPerSecond == 0)
                 {
@@ -355,6 +355,16 @@ sealed class GameServer
                         }
 
                         BroadcastChat(chatClient, chatSubmit.Text);
+                        break;
+                    case SnapshotAckMessage snapshotAck:
+                        var ackClient = FindClient(_clientsBySlot, remoteEndPoint);
+                        if (ackClient is null)
+                        {
+                            break;
+                        }
+
+                        ackClient.LastSeen = _clock.Elapsed;
+                        ackClient.AcknowledgeSnapshot(snapshotAck.Frame);
                         break;
                     case InputStateMessage input:
                         var client = FindClient(_clientsBySlot, remoteEndPoint);

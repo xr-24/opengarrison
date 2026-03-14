@@ -189,6 +189,16 @@ internal sealed class NetworkGameClient : IDisposable
         }
     }
 
+    public void AcknowledgeSnapshot(ulong frame)
+    {
+        if (!IsConnected || frame == 0)
+        {
+            return;
+        }
+
+        Send(new SnapshotAckMessage(frame));
+    }
+
     public IEnumerable<IProtocolMessage> ReceiveMessages()
     {
         var udpClient = _udpClient;

@@ -35,6 +35,19 @@ public sealed class ProtocolAndSnapshotTests
     }
 
     [Fact]
+    public void ProtocolCodec_RoundTripsSnapshotAckMessage()
+    {
+        var message = new SnapshotAckMessage(42UL);
+
+        var payload = ProtocolCodec.Serialize(message);
+        var success = ProtocolCodec.TryDeserialize(payload, out var decoded);
+
+        Assert.True(success);
+        var decodedMessage = Assert.IsType<SnapshotAckMessage>(decoded);
+        Assert.Equal(message.Frame, decodedMessage.Frame);
+    }
+
+    [Fact]
     public void ProtocolCodec_RoundTripsServerStatusResponseMessage()
     {
         var message = new ServerStatusResponseMessage("GG2 CSharp UDP Server", "Truefort", (byte)GameModeKind.CaptureTheFlag, 2, 2, 1);
@@ -84,6 +97,31 @@ public sealed class ProtocolAndSnapshotTests
         Assert.True(decodedSnapshot.CombatTraces[0].IsSniperTracer);
         Assert.Equal(snapshot.ControlPoints.Count, decodedSnapshot.ControlPoints.Count);
         Assert.Equal(snapshot.Generators.Count, decodedSnapshot.Generators.Count);
+    }
+
+    [Fact]
+    public void ProtocolCodec_RoundTripsDeltaSnapshotMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            BaselineFrame = 41UL,
+            IsDelta = true,
+            Sentries =
+            [
+                new SnapshotSentryState(501, 1, (byte)PlayerTeam.Red, 300f, 250f, 60, false, 1f, 1f, 15f, 2, 1, 1, true, true, 2, 330f, 255f),
+            ],
+            RemovedShotIds = [601, 602],
+        };
+
+        var payload = ProtocolCodec.Serialize(snapshot);
+        var success = ProtocolCodec.TryDeserialize(payload, out var decoded);
+
+        Assert.True(success);
+        var decodedSnapshot = Assert.IsType<SnapshotMessage>(decoded);
+        Assert.True(decodedSnapshot.IsDelta);
+        Assert.Equal(41UL, decodedSnapshot.BaselineFrame);
+        Assert.Single(decodedSnapshot.Sentries);
+        Assert.Equal(new[] { 601, 602 }, decodedSnapshot.RemovedShotIds);
     }
 
     [Fact]
@@ -439,6 +477,57 @@ public sealed class ProtocolAndSnapshotTests
         Assert.Equal(2, world.Generators.Count);
         Assert.Equal(3200, world.GetGenerator(PlayerTeam.Red)!.Health);
         Assert.Equal(900, world.GetGenerator(PlayerTeam.Blue)!.Health);
+    }
+
+    [Fact]
+    public void SnapshotDelta_ToFullSnapshot_MergesTransientEntitiesAgainstBaseline()
+    {
+        var baseline = CreateSnapshot() with
+        {
+            Frame = 10UL,
+            Sentries =
+            [
+                new SnapshotSentryState(501, 1, (byte)PlayerTeam.Red, 300f, 250f, 60, false, 1f, 1f, 15f, 2, 1, 1, true, true, 2, 330f, 255f),
+            ],
+            Shots =
+            [
+                new SnapshotShotState(601, (byte)PlayerTeam.Red, 1, 310f, 255f, 4f, 0f, 10),
+            ],
+            BloodDrops =
+            [
+                new SnapshotBloodDropState(701, 380f, 300f, 0.5f, 1.5f, false, 11),
+            ],
+        };
+        var delta = CreateSnapshot() with
+        {
+            Frame = 11UL,
+            BaselineFrame = 10UL,
+            IsDelta = true,
+            Sentries =
+            [
+                new SnapshotSentryState(501, 1, (byte)PlayerTeam.Red, 304f, 252f, 55, true, 1f, 1f, 18f, 1, 0, 0, true, false, -1, 0f, 0f),
+                new SnapshotSentryState(502, 1, (byte)PlayerTeam.Red, 350f, 265f, 80, true, 1f, 1f, 0f, 0, 0, 0, true, false, -1, 0f, 0f),
+            ],
+            Shots = [],
+            RemovedShotIds = [601],
+            BloodDrops = [],
+            RemovedBloodDropIds = [701],
+            DeadBodies =
+            [
+                new SnapshotDeadBodyState(801, (byte)PlayerTeam.Blue, (byte)PlayerClass.Scout, 390f, 305f, 24f, 36f, 0f, 1f, false, 25),
+            ],
+        };
+
+        var merged = SnapshotDelta.ToFullSnapshot(delta, baseline);
+
+        Assert.False(merged.IsDelta);
+        Assert.Equal(0UL, merged.BaselineFrame);
+        Assert.Equal(2, merged.Sentries.Count);
+        Assert.Empty(merged.Shots);
+        Assert.Empty(merged.BloodDrops);
+        Assert.Single(merged.DeadBodies);
+        Assert.Equal(502, merged.Sentries[1].Id);
+        Assert.Equal(801, merged.DeadBodies[0].Id);
     }
 
     private static SnapshotMessage CreateSnapshot()

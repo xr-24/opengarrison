@@ -5,13 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using GG2.Core;
+using GG2.Protocol;
 
 namespace GG2.Client;
 
 public partial class Game1
 {
+    private const int SnapshotStateHistoryLimit = 96;
     private const float RemotePlayerHistorySnapDistance = 64f;
     private const float RemotePlayerCorrectionSnapDistance = 48f;
+    private const float RemotePlayerMinimumInterpolationBackTimeSeconds = 0.1f;
+    private const float RemotePlayerMaximumInterpolationBackTimeSeconds = 0.2f;
 
     private int GetPlayerStateKey(PlayerEntity player)
     {
@@ -30,12 +34,14 @@ public partial class Game1
     private readonly Dictionary<int, List<EntitySnapshotSample>> _entitySnapshotHistories = new();
     private readonly Dictionary<PlayerTeam, List<EntitySnapshotSample>> _intelSnapshotHistories = new();
     private readonly Dictionary<int, List<PlayerSnapshotSample>> _remotePlayerSnapshotHistories = new();
+    private readonly Dictionary<ulong, SnapshotMessage> _snapshotStatesByFrame = new();
+    private readonly Queue<ulong> _snapshotStateFrameOrder = new();
     private readonly Stopwatch _networkInterpolationClock = Stopwatch.StartNew();
     private double _networkInterpolationClockSeconds;
     private float _networkSnapshotInterpolationDurationSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
     private float _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
     private float _smoothedSnapshotJitterSeconds;
-    private float _remotePlayerInterpolationBackTimeSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+    private float _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
     private double _lastSnapshotReceivedTimeSeconds = -1d;
     private double _latestSnapshotServerTimeSeconds = -1d;
     private double _latestSnapshotReceivedClockSeconds = -1d;
@@ -106,4 +112,29 @@ public partial class Game1
         double TimeSeconds,
         float ExtrapolationDurationSeconds,
         float MaxExtrapolationDistance);
+
+    private void ResetSnapshotStateHistory()
+    {
+        _snapshotStatesByFrame.Clear();
+        _snapshotStateFrameOrder.Clear();
+    }
+
+    private void RememberSnapshotState(SnapshotMessage snapshot)
+    {
+        if (!_snapshotStatesByFrame.ContainsKey(snapshot.Frame))
+        {
+            _snapshotStateFrameOrder.Enqueue(snapshot.Frame);
+        }
+
+        _snapshotStatesByFrame[snapshot.Frame] = snapshot;
+        while (_snapshotStateFrameOrder.Count > SnapshotStateHistoryLimit)
+        {
+            _snapshotStatesByFrame.Remove(_snapshotStateFrameOrder.Dequeue());
+        }
+    }
+
+    private bool TryGetSnapshotState(ulong frame, out SnapshotMessage snapshot)
+    {
+        return _snapshotStatesByFrame.TryGetValue(frame, out snapshot!);
+    }
 }

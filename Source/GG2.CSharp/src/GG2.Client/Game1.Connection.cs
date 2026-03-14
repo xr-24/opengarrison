@@ -126,6 +126,7 @@ public partial class Game1
             _latestSnapshotReceivedClockSeconds = -1d;
             _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
             _smoothedSnapshotJitterSeconds = 0f;
+            _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
             _pendingNetworkVisualEvents.Clear();
             _hasPredictedLocalPlayerPosition = false;
             _hasSmoothedLocalPlayerRenderPosition = false;
@@ -136,6 +137,7 @@ public partial class Game1
             _entitySnapshotHistories.Clear();
             _intelSnapshotHistories.Clear();
             _remotePlayerSnapshotHistories.Clear();
+            ResetSnapshotStateHistory();
             _interpolatedEntityPositions.Clear();
             _interpolatedIntelPositions.Clear();
             CloseLobbyBrowser(clearStatus: false);
@@ -190,6 +192,7 @@ public partial class Game1
         _passwordEditBuffer = string.Empty;
         _passwordPromptMessage = string.Empty;
         _localPlayerSnapshotEntityId = null;
+        ResetSnapshotStateHistory();
         _menuStatusMessage = statusMessage ?? string.Empty;
         _autoBalanceNoticeText = string.Empty;
         _autoBalanceNoticeTicks = 0;

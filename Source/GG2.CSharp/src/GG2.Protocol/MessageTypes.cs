@@ -21,6 +21,7 @@ public enum MessageType : byte
     AutoBalanceNotice = 14,
     ChatSubmit = 15,
     ChatRelay = 16,
+    SnapshotAck = 17,
 }
 
 public enum ControlCommandKind : byte
@@ -160,6 +161,11 @@ public sealed record ControlAckMessage(
     bool Accepted) : IProtocolMessage
 {
     public MessageType Type => MessageType.ControlAck;
+}
+
+public sealed record SnapshotAckMessage(ulong Frame) : IProtocolMessage
+{
+    public MessageType Type => MessageType.SnapshotAck;
 }
 
 public sealed record SnapshotPlayerState(
@@ -408,6 +414,21 @@ public sealed record SnapshotMessage(
     IReadOnlyList<SnapshotVisualEvent> VisualEvents,
     IReadOnlyList<SnapshotSoundEvent> SoundEvents) : IProtocolMessage
 {
+    public ulong BaselineFrame { get; init; }
+    public bool IsDelta { get; init; }
+    public IReadOnlyList<int> RemovedSentryIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedShotIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedBubbleIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedBladeIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedNeedleIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedRevolverShotIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedRocketIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedFlameIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedMineIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedPlayerGibIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedBloodDropIds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> RemovedDeadBodyIds { get; init; } = Array.Empty<int>();
+
     public MessageType Type => MessageType.Snapshot;
 }
 

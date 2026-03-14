@@ -8,6 +8,8 @@ public static partial class ProtocolCodec
     private static void WriteSnapshot(BinaryWriter writer, SnapshotMessage snapshot)
     {
         writer.Write(snapshot.Frame);
+        writer.Write(snapshot.BaselineFrame);
+        writer.Write(snapshot.IsDelta);
         writer.Write(snapshot.TickRate);
         WriteString(writer, snapshot.LevelName, MaxLevelNameBytes, nameof(snapshot.LevelName));
         writer.Write(snapshot.MapAreaIndex);
@@ -25,17 +27,29 @@ public static partial class ProtocolCodec
         WriteSnapshotPlayers(writer, snapshot.Players);
         WriteCombatTraces(writer, snapshot.CombatTraces);
         WriteSentryStates(writer, snapshot.Sentries);
+        WriteEntityIdList(writer, snapshot.RemovedSentryIds);
         WriteShotStates(writer, snapshot.Shots);
+        WriteEntityIdList(writer, snapshot.RemovedShotIds);
         WriteShotStates(writer, snapshot.Bubbles);
+        WriteEntityIdList(writer, snapshot.RemovedBubbleIds);
         WriteShotStates(writer, snapshot.Blades);
+        WriteEntityIdList(writer, snapshot.RemovedBladeIds);
         WriteShotStates(writer, snapshot.Needles);
+        WriteEntityIdList(writer, snapshot.RemovedNeedleIds);
         WriteShotStates(writer, snapshot.RevolverShots);
+        WriteEntityIdList(writer, snapshot.RemovedRevolverShotIds);
         WriteRocketStates(writer, snapshot.Rockets);
+        WriteEntityIdList(writer, snapshot.RemovedRocketIds);
         WriteFlameStates(writer, snapshot.Flames);
+        WriteEntityIdList(writer, snapshot.RemovedFlameIds);
         WriteMineStates(writer, snapshot.Mines);
+        WriteEntityIdList(writer, snapshot.RemovedMineIds);
         WritePlayerGibStates(writer, snapshot.PlayerGibs);
+        WriteEntityIdList(writer, snapshot.RemovedPlayerGibIds);
         WriteBloodDropStates(writer, snapshot.BloodDrops);
+        WriteEntityIdList(writer, snapshot.RemovedBloodDropIds);
         WriteDeadBodyStates(writer, snapshot.DeadBodies);
+        WriteEntityIdList(writer, snapshot.RemovedDeadBodyIds);
         writer.Write(snapshot.ControlPointSetupTicksRemaining);
         WriteControlPointStates(writer, snapshot.ControlPoints);
         WriteGeneratorStates(writer, snapshot.Generators);
@@ -48,6 +62,8 @@ public static partial class ProtocolCodec
     private static SnapshotMessage ReadSnapshot(BinaryReader reader)
     {
         var frame = reader.ReadUInt64();
+        var baselineFrame = reader.ReadUInt64();
+        var isDelta = reader.ReadBoolean();
         var tickRate = reader.ReadInt32();
         var levelName = ReadString(reader, MaxLevelNameBytes);
         var mapAreaIndex = reader.ReadByte();
@@ -65,17 +81,29 @@ public static partial class ProtocolCodec
         var players = ReadSnapshotPlayers(reader);
         var combatTraces = ReadCombatTraces(reader);
         var sentries = ReadSentryStates(reader);
+        var removedSentryIds = ReadEntityIdList(reader);
         var shots = ReadShotStates(reader);
+        var removedShotIds = ReadEntityIdList(reader);
         var bubbles = ReadShotStates(reader);
+        var removedBubbleIds = ReadEntityIdList(reader);
         var blades = ReadShotStates(reader);
+        var removedBladeIds = ReadEntityIdList(reader);
         var needles = ReadShotStates(reader);
+        var removedNeedleIds = ReadEntityIdList(reader);
         var revolverShots = ReadShotStates(reader);
+        var removedRevolverShotIds = ReadEntityIdList(reader);
         var rockets = ReadRocketStates(reader);
+        var removedRocketIds = ReadEntityIdList(reader);
         var flames = ReadFlameStates(reader);
+        var removedFlameIds = ReadEntityIdList(reader);
         var mines = ReadMineStates(reader);
+        var removedMineIds = ReadEntityIdList(reader);
         var playerGibs = ReadPlayerGibStates(reader);
+        var removedPlayerGibIds = ReadEntityIdList(reader);
         var bloodDrops = ReadBloodDropStates(reader);
+        var removedBloodDropIds = ReadEntityIdList(reader);
         var deadBodies = ReadDeadBodyStates(reader);
+        var removedDeadBodyIds = ReadEntityIdList(reader);
         var controlPointSetupTicksRemaining = reader.ReadInt32();
         var controlPoints = ReadControlPointStates(reader);
         var generators = ReadGeneratorStates(reader);
@@ -120,7 +148,44 @@ public static partial class ProtocolCodec
             deathCam,
             killFeed,
             visualEvents,
-            soundEvents);
+            soundEvents)
+        {
+            BaselineFrame = baselineFrame,
+            IsDelta = isDelta,
+            RemovedSentryIds = removedSentryIds,
+            RemovedShotIds = removedShotIds,
+            RemovedBubbleIds = removedBubbleIds,
+            RemovedBladeIds = removedBladeIds,
+            RemovedNeedleIds = removedNeedleIds,
+            RemovedRevolverShotIds = removedRevolverShotIds,
+            RemovedRocketIds = removedRocketIds,
+            RemovedFlameIds = removedFlameIds,
+            RemovedMineIds = removedMineIds,
+            RemovedPlayerGibIds = removedPlayerGibIds,
+            RemovedBloodDropIds = removedBloodDropIds,
+            RemovedDeadBodyIds = removedDeadBodyIds,
+        };
+    }
+
+    private static void WriteEntityIdList(BinaryWriter writer, IReadOnlyList<int> ids)
+    {
+        writer.Write((ushort)ids.Count);
+        for (var index = 0; index < ids.Count; index += 1)
+        {
+            writer.Write(ids[index]);
+        }
+    }
+
+    private static List<int> ReadEntityIdList(BinaryReader reader)
+    {
+        var count = reader.ReadUInt16();
+        var ids = new List<int>(count);
+        for (var index = 0; index < count; index += 1)
+        {
+            ids.Add(reader.ReadInt32());
+        }
+
+        return ids;
     }
 
     private static void WriteSnapshotPlayers(BinaryWriter writer, IReadOnlyList<SnapshotPlayerState> players)

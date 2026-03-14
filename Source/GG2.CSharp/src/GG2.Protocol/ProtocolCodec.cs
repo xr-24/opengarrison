@@ -92,6 +92,9 @@ public static partial class ProtocolCodec
                 writer.Write((byte)ack.Kind);
                 writer.Write(ack.Accepted);
                 break;
+            case SnapshotAckMessage snapshotAck:
+                writer.Write(snapshotAck.Frame);
+                break;
             case SnapshotMessage snapshot:
                 WriteSnapshot(writer, snapshot);
                 break;
@@ -164,6 +167,7 @@ public static partial class ProtocolCodec
                     reader.ReadUInt32(),
                     (ControlCommandKind)reader.ReadByte(),
                     reader.ReadBoolean()),
+                MessageType.SnapshotAck => new SnapshotAckMessage(reader.ReadUInt64()),
                 MessageType.Snapshot => ReadSnapshot(reader),
                 _ => null,
             };

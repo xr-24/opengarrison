@@ -20,6 +20,7 @@ public partial class Game1
             _entitySnapshotHistories.Clear();
             _intelSnapshotHistories.Clear();
             _remotePlayerSnapshotHistories.Clear();
+            ResetSnapshotStateHistory();
             _lastAppliedSnapshotFrame = 0;
             _hasReceivedSnapshot = false;
             _lastSnapshotReceivedTimeSeconds = -1d;
@@ -27,7 +28,7 @@ public partial class Game1
             _latestSnapshotReceivedClockSeconds = -1d;
             _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
             _smoothedSnapshotJitterSeconds = 0f;
-            _remotePlayerInterpolationBackTimeSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+            _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
             _pendingNetworkVisualEvents.Clear();
             _processedNetworkSoundEventIds.Clear();
             _processedNetworkSoundEventOrder.Clear();
@@ -210,10 +211,10 @@ public partial class Game1
             0.12f);
         _remotePlayerInterpolationBackTimeSeconds = Math.Clamp(
             MathF.Max(
-                baseIntervalSeconds * 2f,
-                (_smoothedSnapshotIntervalSeconds * 2f) + (_smoothedSnapshotJitterSeconds * 3f)),
-            0.06f,
-            0.18f);
+                RemotePlayerMinimumInterpolationBackTimeSeconds,
+                (_smoothedSnapshotIntervalSeconds * 2.5f) + (_smoothedSnapshotJitterSeconds * 4f)),
+            RemotePlayerMinimumInterpolationBackTimeSeconds,
+            RemotePlayerMaximumInterpolationBackTimeSeconds);
 
         foreach (var player in EnumerateRemotePlayersForView())
         {
@@ -435,36 +436,17 @@ public partial class Game1
             return newer.Position;
         }
 
+        // Remote player movement is smoother and more stable when we interpolate
+        // directly between authoritative positions instead of fitting a cubic curve
+        // through raw network velocities that can change abruptly.
         var alpha = float.Clamp((float)((renderTimeSeconds - older.TimeSeconds) / durationSeconds), 0f, 1f);
-        var t2 = alpha * alpha;
-        var t3 = t2 * alpha;
-        var h00 = (2f * t3) - (3f * t2) + 1f;
-        var h10 = t3 - (2f * t2) + alpha;
-        var h01 = (-2f * t3) + (3f * t2);
-        var h11 = t3 - t2;
-        var duration = (float)durationSeconds;
-        return (older.Position * h00)
-            + (older.Velocity * duration * h10)
-            + (newer.Position * h01)
-            + (newer.Velocity * duration * h11);
+        return Vector2.Lerp(older.Position, newer.Position, alpha);
     }
 
     private static Vector2 EvaluateRemotePlayerExtrapolation(PlayerSnapshotSample sample, double renderTimeSeconds)
     {
-        var extrapolationSeconds = float.Clamp((float)(renderTimeSeconds - sample.TimeSeconds), 0f, 0.075f);
-        if (extrapolationSeconds <= 0f || sample.Velocity == Vector2.Zero)
-        {
-            return sample.Position;
-        }
-
-        var offset = sample.Velocity * extrapolationSeconds;
-        var distance = offset.Length();
-        if (distance > 36f)
-        {
-            offset *= 36f / distance;
-        }
-
-        return sample.Position + offset;
+        _ = renderTimeSeconds;
+        return sample.Position;
     }
 
     private double GetRemotePlayerRenderTimeSeconds()
