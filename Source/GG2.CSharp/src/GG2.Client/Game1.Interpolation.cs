@@ -12,10 +12,10 @@ namespace GG2.Client;
 public partial class Game1
 {
     private const int SnapshotStateHistoryLimit = 96;
-    private const float RemotePlayerHistorySnapDistance = 64f;
-    private const float RemotePlayerCorrectionSnapDistance = 48f;
-    private const float RemotePlayerMinimumInterpolationBackTimeSeconds = 0.1f;
-    private const float RemotePlayerMaximumInterpolationBackTimeSeconds = 0.2f;
+    private const float RemotePlayerTeleportSnapDistance = 128f;
+    private const float RemotePlayerExtrapolationDurationSeconds = 0.05f;
+    private const float RemotePlayerMinimumInterpolationBackTimeSeconds = 0.12f;
+    private const float RemotePlayerMaximumInterpolationBackTimeSeconds = 0.22f;
 
     private int GetPlayerStateKey(PlayerEntity player)
     {

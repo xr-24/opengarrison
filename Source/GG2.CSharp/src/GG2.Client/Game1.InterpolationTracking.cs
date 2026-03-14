@@ -212,7 +212,7 @@ public partial class Game1
         _remotePlayerInterpolationBackTimeSeconds = Math.Clamp(
             MathF.Max(
                 RemotePlayerMinimumInterpolationBackTimeSeconds,
-                (_smoothedSnapshotIntervalSeconds * 2.5f) + (_smoothedSnapshotJitterSeconds * 4f)),
+                (_smoothedSnapshotIntervalSeconds * 3f) + (_smoothedSnapshotJitterSeconds * 6f)),
             RemotePlayerMinimumInterpolationBackTimeSeconds,
             RemotePlayerMaximumInterpolationBackTimeSeconds);
 
@@ -333,7 +333,7 @@ public partial class Game1
             _remotePlayerSnapshotHistories[player.Id] = history;
         }
 
-        if (ShouldResetRemotePlayerSnapshotHistory(player, sample, history))
+        if (ShouldResetRemotePlayerSnapshotHistory(sample, history))
         {
             history.Clear();
             history.Add(sample);
@@ -373,8 +373,7 @@ public partial class Game1
         _entityInterpolationTracks.Remove(player.Id);
     }
 
-    private bool ShouldResetRemotePlayerSnapshotHistory(
-        PlayerEntity player,
+    private static bool ShouldResetRemotePlayerSnapshotHistory(
         PlayerSnapshotSample sample,
         List<PlayerSnapshotSample> history)
     {
@@ -391,41 +390,27 @@ public partial class Game1
             return true;
         }
 
-        var snapshotJumpThreshold = GetRemotePlayerSnapThreshold(latest, sample, RemotePlayerHistorySnapDistance);
-        if (Vector2.DistanceSquared(latest.Position, sample.Position) > snapshotJumpThreshold * snapshotJumpThreshold)
+        var sampleJumpThreshold = GetRemotePlayerTeleportSnapThreshold(latest, sample);
+        if (Vector2.DistanceSquared(latest.Position, sample.Position) > sampleJumpThreshold * sampleJumpThreshold)
         {
             return true;
         }
 
-        var renderedPosition = _interpolatedEntityPositions.GetValueOrDefault(player.Id, latest.Position);
-        var correctionThreshold = GetRemotePlayerCorrectionSnapThreshold(latest, sample);
-        return Vector2.DistanceSquared(renderedPosition, sample.Position) > correctionThreshold * correctionThreshold;
+        return false;
     }
 
-    private static float GetRemotePlayerSnapThreshold(
-        PlayerSnapshotSample older,
-        PlayerSnapshotSample newer,
-        float minimumDistance)
-    {
-        var intervalSeconds = (float)Math.Max(
-            1d / SimulationConfig.DefaultTicksPerSecond,
-            newer.TimeSeconds - older.TimeSeconds);
-        var maxExpectedSpeed = MathF.Max(older.Velocity.Length(), newer.Velocity.Length());
-        return MathF.Max(minimumDistance, (maxExpectedSpeed * intervalSeconds * 3f) + 24f);
-    }
-
-    private float GetRemotePlayerCorrectionSnapThreshold(
+    private static float GetRemotePlayerTeleportSnapThreshold(
         PlayerSnapshotSample older,
         PlayerSnapshotSample newer)
     {
+        var intervalSeconds = (float)Math.Clamp(
+            newer.TimeSeconds - older.TimeSeconds,
+            1d / SimulationConfig.DefaultTicksPerSecond,
+            0.2d);
         var maxExpectedSpeed = MathF.Max(older.Velocity.Length(), newer.Velocity.Length());
-        var bufferedDelaySeconds = _remotePlayerInterpolationBackTimeSeconds
-            + _smoothedSnapshotIntervalSeconds
-            + _smoothedSnapshotJitterSeconds;
-        var expectedBufferedDistance = maxExpectedSpeed * MathF.Max(0.05f, bufferedDelaySeconds);
         return MathF.Max(
-            RemotePlayerCorrectionSnapDistance * 2f,
-            (expectedBufferedDistance * 1.75f) + 32f);
+            RemotePlayerTeleportSnapDistance,
+            (maxExpectedSpeed * intervalSeconds * 4f) + 64f);
     }
 
     private static Vector2 InterpolateRemotePlayerSample(PlayerSnapshotSample older, PlayerSnapshotSample newer, double renderTimeSeconds)
@@ -445,8 +430,24 @@ public partial class Game1
 
     private static Vector2 EvaluateRemotePlayerExtrapolation(PlayerSnapshotSample sample, double renderTimeSeconds)
     {
-        _ = renderTimeSeconds;
-        return sample.Position;
+        var extrapolationSeconds = float.Clamp(
+            (float)(renderTimeSeconds - sample.TimeSeconds),
+            0f,
+            RemotePlayerExtrapolationDurationSeconds);
+        if (extrapolationSeconds <= 0f || sample.Velocity == Vector2.Zero)
+        {
+            return sample.Position;
+        }
+
+        var offset = sample.Velocity * extrapolationSeconds;
+        var distance = offset.Length();
+        var maxDistance = MathF.Max(16f, sample.Velocity.Length() * RemotePlayerExtrapolationDurationSeconds);
+        if (distance > maxDistance && distance > 0f)
+        {
+            offset *= maxDistance / distance;
+        }
+
+        return sample.Position + offset;
     }
 
     private double GetRemotePlayerRenderTimeSeconds()
