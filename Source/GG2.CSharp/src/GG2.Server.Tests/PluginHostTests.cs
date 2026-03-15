@@ -30,6 +30,23 @@ public sealed class PluginHostTests
     }
 
     [Fact]
+    public void PluginCommandRegistry_WhenPluginCommandThrows_ReturnsFailureResponse()
+    {
+        var registry = new PluginCommandRegistry();
+        registry.RegisterPluginCommand(new ThrowingCommand("explode"), "sample.plugin");
+
+        var executed = registry.TryExecute(
+            "explode",
+            new Gg2ServerCommandContext(new TestState(), new TestAdminOperations()),
+            CancellationToken.None,
+            out var responseLines);
+
+        Assert.True(executed);
+        Assert.Single(responseLines);
+        Assert.Contains("failed", responseLines[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PluginHost_LoadsPlugin_RegistersCommands_AndDispatchesHooks()
     {
         RecordingPlugin.Reset();
@@ -65,6 +82,9 @@ public sealed class PluginHostTests
         host.NotifyChatReceived(new ChatReceivedEvent(1, "Alice", "hello", PlayerTeam.Red));
         host.NotifyMapChanging(new MapChangingEvent("ctf_truefort", 1, 1, "cp_egypt", 1, false, PlayerTeam.Red));
         host.NotifyMapChanged(new MapChangedEvent("cp_egypt", 1, 1, GameModeKind.ControlPoint));
+        host.NotifyScoreChanged(new ScoreChangedEvent(2, 1, GameModeKind.CaptureTheFlag));
+        host.NotifyRoundEnded(new RoundEndedEvent(GameModeKind.CaptureTheFlag, PlayerTeam.Red, 2, 1, 123));
+        host.NotifyKillFeedEntry(new KillFeedEvent("Alice", PlayerTeam.Red, "RocketKillS", "Bob", PlayerTeam.Blue, "Alice eliminated Bob"));
         host.NotifyClientDisconnected(new ClientDisconnectedEvent(1, "Alice", "127.0.0.1:8190", "quit", true));
         host.NotifyServerStopping();
         host.NotifyServerStopped();
@@ -81,6 +101,9 @@ public sealed class PluginHostTests
         Assert.Contains(plugin.Events, entry => entry == "chat:hello");
         Assert.Contains(plugin.Events, entry => entry == "map-changing:cp_egypt:1");
         Assert.Contains(plugin.Events, entry => entry == "map-changed:cp_egypt:ControlPoint");
+        Assert.Contains(plugin.Events, entry => entry == "score:2:1:CaptureTheFlag");
+        Assert.Contains(plugin.Events, entry => entry == "round-ended:Red:2-1:123");
+        Assert.Contains(plugin.Events, entry => entry == "killfeed:Alice:Bob:RocketKillS");
         Assert.Contains(plugin.Events, entry => entry == "disconnected:quit");
         Assert.Contains(plugin.Events, entry => entry == "lifecycle:stopping");
         Assert.Contains(plugin.Events, entry => entry == "lifecycle:stopped");
@@ -130,6 +153,10 @@ public sealed class PluginHostTests
 
         public bool TrySetClass(byte slot, PlayerClass playerClass) => true;
 
+        public bool TryForceKill(byte slot) => true;
+
+        public bool TrySetCapLimit(int capLimit) => true;
+
         public bool TryChangeMap(string levelName, int mapAreaIndex = 1, bool preservePlayerStats = false) => true;
     }
 
@@ -155,12 +182,35 @@ public sealed class PluginHostTests
         }
     }
 
+    private sealed class ThrowingCommand : IGg2ServerCommand
+    {
+        public ThrowingCommand(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+
+        public string Description => "Throws an exception.";
+
+        public string Usage => Name;
+
+        public Task<IReadOnlyList<string>> ExecuteAsync(
+            Gg2ServerCommandContext context,
+            string arguments,
+            CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("boom");
+        }
+    }
+
     public sealed class RecordingPlugin :
         IGg2ServerPlugin,
         IGg2ServerLifecycleHooks,
         IGg2ServerClientHooks,
         IGg2ServerChatHooks,
-        IGg2ServerMapHooks
+        IGg2ServerMapHooks,
+        IGg2ServerGameplayHooks
     {
         public static RecordingPlugin? Instance { get; private set; }
 
@@ -219,6 +269,13 @@ public sealed class PluginHostTests
         public void OnMapChanging(MapChangingEvent e) => Events.Add($"map-changing:{e.NextLevelName}:{e.NextAreaIndex}");
 
         public void OnMapChanged(MapChangedEvent e) => Events.Add($"map-changed:{e.LevelName}:{e.Mode}");
+
+        public void OnScoreChanged(ScoreChangedEvent e) => Events.Add($"score:{e.RedCaps}:{e.BlueCaps}:{e.Mode}");
+
+        public void OnRoundEnded(RoundEndedEvent e) =>
+            Events.Add($"round-ended:{(e.WinnerTeam?.ToString() ?? "None")}:{e.RedCaps}-{e.BlueCaps}:{e.Frame}");
+
+        public void OnKillFeedEntry(KillFeedEvent e) => Events.Add($"killfeed:{e.KillerName}:{e.VictimName}:{e.WeaponSpriteName}");
 
         private sealed class PluginEchoCommand : IGg2ServerCommand
         {

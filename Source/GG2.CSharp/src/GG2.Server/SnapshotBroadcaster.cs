@@ -18,6 +18,10 @@ sealed class SnapshotBroadcaster
     private readonly ulong _transientEventReplayTicks;
     private readonly List<RetainedSnapshotSoundEvent> _recentSoundEvents = new();
     private readonly List<RetainedSnapshotVisualEvent> _recentVisualEvents = new();
+    private string _cachedMapMetadataLevelName = string.Empty;
+    private bool _cachedIsCustomMap;
+    private string _cachedMapDownloadUrl = string.Empty;
+    private string _cachedMapContentHash = string.Empty;
     private ulong _nextTransientEventId = 1;
 
     public SnapshotBroadcaster(
@@ -115,6 +119,7 @@ sealed class SnapshotBroadcaster
         var spectatorCount = _clientsBySlot.Keys.Count(IsSpectatorSlot);
         var mapAreaIndex = (byte)Math.Clamp(_world.Level.MapAreaIndex, 1, byte.MaxValue);
         var mapAreaCount = (byte)Math.Clamp(_world.Level.MapAreaCount, 1, byte.MaxValue);
+        var mapMetadata = GetCurrentMapMetadata();
         return new SnapshotMessage(
             (ulong)_world.Frame,
             _config.TicksPerSecond,
@@ -151,7 +156,35 @@ sealed class SnapshotBroadcaster
             ToSnapshotDeathCamState(_world.GetNetworkPlayerDeathCam(client.Slot)),
             _world.KillFeed.Select(ToSnapshotKillFeedEntry).ToArray(),
             visualEvents,
-            soundEvents);
+            soundEvents,
+            mapMetadata.IsCustomMap,
+            mapMetadata.MapDownloadUrl,
+            mapMetadata.MapContentHash);
+    }
+
+    private (bool IsCustomMap, string MapDownloadUrl, string MapContentHash) GetCurrentMapMetadata()
+    {
+        var levelName = _world.Level.Name;
+        if (string.Equals(_cachedMapMetadataLevelName, levelName, StringComparison.OrdinalIgnoreCase))
+        {
+            return (_cachedIsCustomMap, _cachedMapDownloadUrl, _cachedMapContentHash);
+        }
+
+        _cachedMapMetadataLevelName = levelName;
+        if (CustomMapDescriptorResolver.TryResolve(levelName, out var descriptor))
+        {
+            _cachedIsCustomMap = true;
+            _cachedMapDownloadUrl = descriptor.SourceUrl;
+            _cachedMapContentHash = descriptor.ContentHash;
+        }
+        else
+        {
+            _cachedIsCustomMap = false;
+            _cachedMapDownloadUrl = string.Empty;
+            _cachedMapContentHash = string.Empty;
+        }
+
+        return (_cachedIsCustomMap, _cachedMapDownloadUrl, _cachedMapContentHash);
     }
 
     private SnapshotMessage? TryGetBaselineSnapshot(ClientSession client, SnapshotMessage fullSnapshot)

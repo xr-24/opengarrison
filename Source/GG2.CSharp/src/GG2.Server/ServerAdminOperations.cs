@@ -50,6 +50,29 @@ internal sealed class ServerAdminOperations(
 
     public bool TrySetClass(byte slot, PlayerClass playerClass) => sessionManagerGetter().TrySetClientClass(slot, playerClass);
 
+    public bool TryForceKill(byte slot)
+    {
+        if (!SimulationWorld.IsPlayableNetworkPlayerSlot(slot))
+        {
+            return false;
+        }
+
+        return worldGetter().ForceKillNetworkPlayer(slot);
+    }
+
+    public bool TrySetCapLimit(int capLimit)
+    {
+        if (capLimit is < 1 or > 255)
+        {
+            return false;
+        }
+
+        var world = worldGetter();
+        world.SetCapLimit(capLimit);
+        log($"[server] cap limit set to {world.MatchRules.CapLimit}");
+        return true;
+    }
+
     public bool TryChangeMap(string levelName, int mapAreaIndex = 1, bool preservePlayerStats = false)
     {
         var world = worldGetter();

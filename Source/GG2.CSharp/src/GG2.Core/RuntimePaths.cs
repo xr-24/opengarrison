@@ -19,6 +19,16 @@ public static class RuntimePaths
         }
     }
 
+    public static string MapsDirectory
+    {
+        get
+        {
+            var path = Path.Combine(ApplicationRoot, "Maps");
+            Directory.CreateDirectory(path);
+            return path;
+        }
+    }
+
     public static string GetConfigPath(string fileName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);

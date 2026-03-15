@@ -40,3 +40,23 @@ public readonly record struct MapChangedEvent(
     int AreaIndex,
     int AreaCount,
     GameModeKind Mode);
+
+public readonly record struct ScoreChangedEvent(
+    int RedCaps,
+    int BlueCaps,
+    GameModeKind Mode);
+
+public readonly record struct RoundEndedEvent(
+    GameModeKind Mode,
+    PlayerTeam? WinnerTeam,
+    int RedCaps,
+    int BlueCaps,
+    long Frame);
+
+public readonly record struct KillFeedEvent(
+    string KillerName,
+    PlayerTeam KillerTeam,
+    string WeaponSpriteName,
+    string VictimName,
+    PlayerTeam VictimTeam,
+    string MessageText);

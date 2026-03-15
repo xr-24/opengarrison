@@ -31,8 +31,16 @@ public static class CustomMapPngImporter
         {
             return null;
         }
+        if (string.IsNullOrWhiteSpace(entitiesSection))
+        {
+            return null;
+        }
 
-        var solids = DecodeWalkmask(walkmaskSection, out var bounds);
+        if (!TryDecodeWalkmask(walkmaskSection, out var solids, out var bounds))
+        {
+            return null;
+        }
+
         var room = BuildRoomMetadata(Path.GetFileNameWithoutExtension(pngPath), pngPath, bounds, entitiesSection);
         return new Result(room, solids);
     }
@@ -166,8 +174,9 @@ public static class CustomMapPngImporter
         return input[start..end].Trim();
     }
 
-    private static IReadOnlyList<LevelSolid> DecodeWalkmask(string walkmaskSection, out WorldBounds bounds)
+    private static bool TryDecodeWalkmask(string walkmaskSection, out IReadOnlyList<LevelSolid> solids, out WorldBounds bounds)
     {
+        solids = Array.Empty<LevelSolid>();
         var lines = walkmaskSection
             .Replace("\r", string.Empty, StringComparison.Ordinal)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -177,8 +186,8 @@ public static class CustomMapPngImporter
             || width <= 0
             || height <= 0)
         {
-            bounds = new WorldBounds(2400f, 1400f);
-            return Array.Empty<LevelSolid>();
+            bounds = default;
+            return false;
         }
 
         var cells = new bool[width * height];
@@ -211,7 +220,7 @@ public static class CustomMapPngImporter
             }
         }
 
-        var solids = new List<LevelSolid>();
+        var decodedSolids = new List<LevelSolid>();
         for (var row = 0; row < height; row += 1)
         {
             var column = 0;
@@ -229,12 +238,13 @@ public static class CustomMapPngImporter
                     column += 1;
                 }
 
-                solids.Add(new LevelSolid(start, row, column - start, 1f));
+                decodedSolids.Add(new LevelSolid(start, row, column - start, 1f));
             }
         }
 
         bounds = new WorldBounds(width, height);
-        return solids;
+        solids = decodedSolids;
+        return true;
     }
 
     private static GameMakerRoomMetadata BuildRoomMetadata(string mapName, string pngPath, WorldBounds bounds, string entitiesSection)

@@ -38,12 +38,30 @@ public partial class Game1
                         break;
                     }
 
+                    if (!CustomMapSyncService.EnsureMapAvailable(
+                            welcome.LevelName,
+                            welcome.IsCustomMap,
+                            welcome.MapDownloadUrl,
+                            welcome.MapContentHash,
+                            out var welcomeMapError))
+                    {
+                        ReturnToMainMenu(welcomeMapError);
+                        AddConsoleLine($"custom map sync failed: {welcomeMapError}");
+                        break;
+                    }
+
                     ReinitializeSimulationForTickRate(welcome.TickRate);
                     _networkClient.SetLocalPlayerSlot(welcome.PlayerSlot);
                     _networkClient.ClearPendingTeamSelection();
                     _networkClient.ClearPendingClassSelection();
                     ResetClientTimingState();
-                    _world.TryLoadLevel(welcome.LevelName);
+                    if (!_world.TryLoadLevel(welcome.LevelName))
+                    {
+                        var loadError = $"Failed to load map: {welcome.LevelName}";
+                        ReturnToMainMenu(loadError);
+                        AddConsoleLine(loadError);
+                        break;
+                    }
                     _pendingHostedConnectTicks = -1;
                     _lastAppliedSnapshotFrame = 0;
                     _lastBufferedSnapshotFrame = 0;
@@ -179,6 +197,20 @@ public partial class Game1
 
                     break;
                 case SnapshotMessage snapshot:
+                    if ((!string.Equals(snapshot.LevelName, _world.Level.Name, StringComparison.OrdinalIgnoreCase)
+                            || snapshot.MapAreaIndex != _world.Level.MapAreaIndex)
+                        && !CustomMapSyncService.EnsureMapAvailable(
+                            snapshot.LevelName,
+                            snapshot.IsCustomMap,
+                            snapshot.MapDownloadUrl,
+                            snapshot.MapContentHash,
+                            out var snapshotMapError))
+                    {
+                        ReturnToMainMenu(snapshotMapError);
+                        AddConsoleLine($"custom map sync failed: {snapshotMapError}");
+                        break;
+                    }
+
                     if (snapshot.Frame <= latestBufferedSnapshotFrame)
                     {
                         RecordStaleSnapshot();

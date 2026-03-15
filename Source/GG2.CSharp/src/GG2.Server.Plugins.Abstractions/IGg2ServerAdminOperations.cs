@@ -14,5 +14,9 @@ public interface IGg2ServerAdminOperations
 
     bool TrySetClass(byte slot, PlayerClass playerClass);
 
+    bool TryForceKill(byte slot);
+
+    bool TrySetCapLimit(int capLimit);
+
     bool TryChangeMap(string levelName, int mapAreaIndex = 1, bool preservePlayerStats = false);
 }

@@ -31,9 +31,10 @@ public static class SimpleLevelFactory
             return null;
         }
 
+        var isCustomMap = Path.GetExtension(levelSpec.RoomSourcePath).Equals(".png", StringComparison.OrdinalIgnoreCase);
         GameMakerRoomMetadata? importedRoom;
         IReadOnlyList<LevelSolid> importedSolids;
-        if (Path.GetExtension(levelSpec.RoomSourcePath).Equals(".png", StringComparison.OrdinalIgnoreCase))
+        if (isCustomMap)
         {
             var customMap = CustomMapPngImporter.Import(levelSpec.RoomSourcePath);
             if (customMap is null)
@@ -77,6 +78,11 @@ public static class SimpleLevelFactory
         {
             blueSpawns = importedRoom.BlueSpawns;
         }
+        if (isCustomMap && (redSpawns.Count == 0 || blueSpawns.Count == 0))
+        {
+            return null;
+        }
+
         if (redSpawns.Count == 0)
         {
             redSpawns = [new SpawnPoint(220f, 320f)];
@@ -90,6 +96,11 @@ public static class SimpleLevelFactory
         var roomObjects = FilterByArea(importedRoom.RoomObjects, areaFilter);
         var floorY = FindFloorBelowSpawn(importedSolids, spawn)
             ?? MathF.Min(bounds.Height - 40f, spawn.Y + 360f);
+        if (isCustomMap && importedSolids.Count == 0)
+        {
+            return null;
+        }
+
         var solids = importedSolids.Count > 0 ? importedSolids : CreateFallbackSolids(bounds, spawn, floorY);
 
         return new SimpleLevel(
