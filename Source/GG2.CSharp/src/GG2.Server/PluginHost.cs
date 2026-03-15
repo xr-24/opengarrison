@@ -50,6 +50,10 @@ internal sealed class PluginHost
     {
         _loadedPlugins.Clear();
         _loadedPlugins.AddRange(PluginLoader.LoadFromAssemblies(assemblies, CreateContext, _log));
+        foreach (var loadedPlugin in _loadedPlugins)
+        {
+            _log($"[plugin] loaded {loadedPlugin.Plugin.DisplayName} ({loadedPlugin.Plugin.Id} {loadedPlugin.Plugin.Version})");
+        }
     }
 
     public void NotifyServerStarting() => Dispatch<IGg2ServerLifecycleHooks>(hook => hook.OnServerStarting());

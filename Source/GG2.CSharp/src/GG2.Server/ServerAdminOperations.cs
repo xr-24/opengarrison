@@ -1,3 +1,4 @@
+using System.Net;
 using GG2.Core;
 using GG2.Protocol;
 using GG2.Server.Plugins;
