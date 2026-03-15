@@ -80,8 +80,7 @@ public static class CustomMapPngImporter
             return builder.ToString();
         }
 
-        var rawBytes = File.ReadAllBytes(pngPath);
-        return Encoding.UTF8.GetString(rawBytes);
+        return string.Empty;
     }
 
     private static void AppendTextChunk(StringBuilder builder, byte[] chunkData)
@@ -273,6 +272,7 @@ public static class CustomMapPngImporter
                     intelBases.Add(new IntelBaseMarker(PlayerTeam.Blue, x, y));
                     break;
                 case "nextareao":
+                case "previousareao":
                     areaBoundaries.Add(y);
                     break;
                 default:
@@ -292,7 +292,10 @@ public static class CustomMapPngImporter
             blueSpawns,
             intelBases,
             roomObjects,
-            areaBoundaries.OrderBy(value => value).ToArray());
+            areaBoundaries
+                .Distinct()
+                .OrderBy(value => value)
+                .ToArray());
     }
 
     private static bool TryCreateRoomObject(string entityType, float x, float y, out RoomObjectMarker marker)
@@ -300,13 +303,23 @@ public static class CustomMapPngImporter
         marker = entityType.ToLowerInvariant() switch
         {
             "spawnroom" => new RoomObjectMarker(RoomObjectType.SpawnRoom, x, y, 42f, 42f, "sprite64", SourceName: entityType),
-            "cabinets" or "healingcabinet" => new RoomObjectMarker(RoomObjectType.HealingCabinet, x, y, 32f, 48f, "sprite74", SourceName: entityType),
+            "cabinets" or "healingcabinet" or "medcabinet" => new RoomObjectMarker(RoomObjectType.HealingCabinet, x, y, 32f, 48f, "sprite74", SourceName: entityType),
             "killbox" => new RoomObjectMarker(RoomObjectType.KillBox, x, y, 42f, 42f, "sprite64", SourceName: entityType),
             "fragbox" => new RoomObjectMarker(RoomObjectType.FragBox, x, y, 42f, 42f, "sprite64", SourceName: entityType),
+            "redteamgate" => new RoomObjectMarker(RoomObjectType.TeamGate, x, y, 6f, 60f, "sprite45", PlayerTeam.Red, entityType),
+            "blueteamgate" => new RoomObjectMarker(RoomObjectType.TeamGate, x, y, 6f, 60f, "sprite45", PlayerTeam.Blue, entityType),
+            "redteamgate2" => new RoomObjectMarker(RoomObjectType.TeamGate, x, y, 60f, 6f, "sprite44", PlayerTeam.Red, entityType),
+            "blueteamgate2" => new RoomObjectMarker(RoomObjectType.TeamGate, x, y, 60f, 6f, "sprite44", PlayerTeam.Blue, entityType),
+            "redintelgate" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 6f, 60f, "sprite45", PlayerTeam.Red, entityType),
+            "blueintelgate" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 6f, 60f, "sprite45", PlayerTeam.Blue, entityType),
+            "redintelgate2" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 60f, 6f, "sprite44", PlayerTeam.Red, entityType),
+            "blueintelgate2" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 60f, 6f, "sprite44", PlayerTeam.Blue, entityType),
+            "intelgatevertical" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 6f, 60f, "sprite45", SourceName: entityType),
+            "intelgatehorizontal" => new RoomObjectMarker(RoomObjectType.IntelGate, x, y, 60f, 6f, "sprite44", SourceName: entityType),
             "playerwall" => new RoomObjectMarker(RoomObjectType.PlayerWall, x, y, 6f, 60f, "sprite45", SourceName: entityType),
-            "playerwallhorizontal" => new RoomObjectMarker(RoomObjectType.PlayerWall, x, y, 60f, 6f, "sprite44", SourceName: entityType),
+            "playerwallhorizontal" or "playerwall_horizontal" => new RoomObjectMarker(RoomObjectType.PlayerWall, x, y, 60f, 6f, "sprite44", SourceName: entityType),
             "bulletwall" => new RoomObjectMarker(RoomObjectType.BulletWall, x, y, 6f, 60f, "sprite45", SourceName: entityType),
-            "bulletwallhorizontal" => new RoomObjectMarker(RoomObjectType.BulletWall, x, y, 60f, 6f, "sprite44", SourceName: entityType),
+            "bulletwallhorizontal" or "bulletwall_horizontal" => new RoomObjectMarker(RoomObjectType.BulletWall, x, y, 60f, 6f, "sprite44", SourceName: entityType),
             "controlpoint" or "controlpoint1" or "controlpoint2" or "controlpoint3" or "controlpoint4" or "controlpoint5"
                 => new RoomObjectMarker(RoomObjectType.ControlPoint, x, y, 42f, 42f, "ControlPointNeutralS", SourceName: entityType),
             "capturepoint" => new RoomObjectMarker(RoomObjectType.CaptureZone, x, y, 42f, 42f, string.Empty, SourceName: entityType),
