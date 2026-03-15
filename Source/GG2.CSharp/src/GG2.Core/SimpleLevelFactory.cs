@@ -117,7 +117,8 @@ public static class SimpleLevelFactory
             roomObjects: roomObjects,
             floorY: floorY,
             solids: solids,
-            importedFromSource: true);
+            importedFromSource: true,
+            areaTransitionMarkers: importedRoom.AreaTransitionMarkers);
     }
 
     public static IReadOnlyList<LevelCatalogEntry> GetAvailableSourceLevels()

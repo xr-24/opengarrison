@@ -253,7 +253,7 @@ public static class CustomMapPngImporter
         var blueSpawns = new List<SpawnPoint>();
         var intelBases = new List<IntelBaseMarker>();
         var roomObjects = new List<RoomObjectMarker>();
-        var areaBoundaries = new List<float>();
+        var areaTransitionMarkers = new List<AreaTransitionMarker>();
         var lines = entitiesSection
             .Replace("\r", string.Empty, StringComparison.Ordinal)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -282,8 +282,10 @@ public static class CustomMapPngImporter
                     intelBases.Add(new IntelBaseMarker(PlayerTeam.Blue, x, y));
                     break;
                 case "nextareao":
+                    areaTransitionMarkers.Add(new AreaTransitionMarker(x, y, AreaTransitionDirection.Next, entityType));
+                    break;
                 case "previousareao":
-                    areaBoundaries.Add(y);
+                    areaTransitionMarkers.Add(new AreaTransitionMarker(x, y, AreaTransitionDirection.Previous, entityType));
                     break;
                 default:
                     if (TryCreateRoomObject(entityType, x, y, out var marker))
@@ -302,10 +304,10 @@ public static class CustomMapPngImporter
             blueSpawns,
             intelBases,
             roomObjects,
-            areaBoundaries
-                .Distinct()
-                .OrderBy(value => value)
-                .ToArray());
+            AreaTransitionMetadata.BuildAreaBoundaries(areaTransitionMarkers))
+        {
+            AreaTransitionMarkers = areaTransitionMarkers.ToArray(),
+        };
     }
 
     private static bool TryCreateRoomObject(string entityType, float x, float y, out RoomObjectMarker marker)

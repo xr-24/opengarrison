@@ -17,13 +17,19 @@ public partial class Game1
             return;
         }
 
+        var visibilityAlpha = GetPlayerVisibilityAlpha(player);
+        if (visibilityAlpha <= 0f)
+        {
+            return;
+        }
+
         var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
         var rectangle = new Rectangle(
             (int)(renderPosition.X - (player.Width / 2f) - cameraPosition.X),
             (int)(renderPosition.Y - (player.Height / 2f) - cameraPosition.Y),
             (int)player.Width,
             (int)player.Height);
-        var fallbackColor = aliveColor;
+        var fallbackColor = aliveColor * visibilityAlpha;
         var spriteTint = GetPlayerColor(player, Color.White);
         if (!GetPlayerIsSpyBackstabAnimating(player))
         {
@@ -34,12 +40,12 @@ public partial class Game1
 
             if (!GetPlayerIsHeavyEating(player) && !player.IsTaunting)
             {
-                TryDrawWeaponSprite(player, cameraPosition, spriteTint);
+                TryDrawWeaponSprite(player, cameraPosition, spriteTint, visibilityAlpha);
             }
         }
 
         DrawChatBubble(player, cameraPosition);
-        if (_showHealthBarEnabled)
+        if (_showHealthBarEnabled && visibilityAlpha > 0f)
         {
             DrawHealthBar(player, cameraPosition, new Color(120, 220, 120), new Color(36, 64, 36));
         }
@@ -174,8 +180,13 @@ public partial class Game1
         return Math.Clamp(animationIndex + teamOffset, 0, frameCount - 1);
     }
 
-    private bool TryDrawWeaponSprite(PlayerEntity player, Vector2 cameraPosition, Color tint)
+    private bool TryDrawWeaponSprite(PlayerEntity player, Vector2 cameraPosition, Color tint, float visibilityAlpha)
     {
+        if (GetPlayerIsSpyCloaked(player) && visibilityAlpha <= PlayerEntity.SpyCloakToggleThreshold)
+        {
+            return false;
+        }
+
         var (spriteName, xOffset, yOffset) = GetWeaponSpriteInfo(player);
         if (spriteName is null)
         {
@@ -345,12 +356,7 @@ public partial class Game1
 
     private Color GetPlayerColor(PlayerEntity player, Color baseColor)
     {
-        if (!player.IsAlive || !GetPlayerIsSpyCloaked(player))
-        {
-            return baseColor;
-        }
-
-        return GetPlayerIsSpyVisibleToEnemies(player) ? baseColor * 0.65f : baseColor * 0.35f;
+        return baseColor * GetPlayerVisibilityAlpha(player);
     }
 
     private static Color GetUberOverlayColor(PlayerTeam team)

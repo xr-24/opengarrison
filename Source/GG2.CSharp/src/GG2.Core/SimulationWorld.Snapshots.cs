@@ -140,6 +140,7 @@ public sealed partial class SimulationWorld
             snapshotPlayer.IsGrounded,
             snapshotPlayer.IsCarryingIntel,
             snapshotPlayer.IsSpyCloaked,
+            snapshotPlayer.SpyCloakAlpha,
             snapshotPlayer.IsUbered,
             snapshotPlayer.IsHeavyEating,
             snapshotPlayer.HeavyEatTicksRemaining,

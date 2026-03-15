@@ -105,36 +105,42 @@ public partial class Game1
         if (_optionsMenuOpen)
         {
             DrawOptionsMenu();
+            DrawDevMessagePopup();
             return;
         }
 
         if (_controlsMenuOpen)
         {
             DrawControlsMenu();
+            DrawDevMessagePopup();
             return;
         }
 
         if (_hostSetupOpen)
         {
             DrawHostSetupMenu();
+            DrawDevMessagePopup();
             return;
         }
 
         if (_creditsOpen)
         {
             DrawCreditsMenu();
+            DrawDevMessagePopup();
             return;
         }
 
         if (_lobbyBrowserOpen)
         {
             DrawLobbyBrowserMenu();
+            DrawDevMessagePopup();
             return;
         }
 
         if (_manualConnectOpen)
         {
             DrawManualConnectMenu();
+            DrawDevMessagePopup();
             return;
         }
 
@@ -148,6 +154,7 @@ public partial class Game1
         }
 
         DrawMenuStatusText();
+        DrawDevMessagePopup();
     }
 
     private void UpdateCreditsMenu(KeyboardState keyboard, MouseState mouse)

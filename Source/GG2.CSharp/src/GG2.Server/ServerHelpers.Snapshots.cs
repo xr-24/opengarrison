@@ -33,6 +33,7 @@ internal static partial class ServerHelpers
             player.IsGrounded,
             player.IsCarryingIntel,
             player.IsSpyCloaked,
+            player.SpyCloakAlpha,
             player.IsUbered,
             player.IsHeavyEating,
             player.HeavyEatTicksRemaining,

@@ -74,18 +74,19 @@ public sealed partial class PlayerEntity
         return true;
     }
 
-    public bool ApplyDamage(int damage)
+    public bool ApplyDamage(int damage, float spyRevealAlpha = 0f)
     {
         if (!IsAlive || IsUbered || damage <= 0)
         {
             return false;
         }
 
+        RevealSpy(spyRevealAlpha);
         Health = int.Max(0, Health - damage);
         return Health == 0;
     }
 
-    public bool ApplyContinuousDamage(float damage)
+    public bool ApplyContinuousDamage(float damage, float spyRevealAlpha = 0f)
     {
         if (!IsAlive || IsUbered || damage <= 0f)
         {
@@ -100,7 +101,18 @@ public sealed partial class PlayerEntity
         }
 
         ContinuousDamageAccumulator -= wholeDamage;
-        return ApplyDamage(wholeDamage);
+        return ApplyDamage(wholeDamage, spyRevealAlpha);
+    }
+
+    public void RevealSpy(float alpha)
+    {
+        if (!IsAlive || ClassId != PlayerClass.Spy || !IsSpyCloaked || alpha <= 0f)
+        {
+            return;
+        }
+
+        SpyCloakAlpha = float.Min(1f, SpyCloakAlpha + alpha);
+        IsSpyVisibleToEnemies = SpyCloakAlpha > 0f || IsSpyBackstabAnimating;
     }
 
     public void ForceSetHealth(int health)
@@ -133,6 +145,7 @@ public sealed partial class PlayerEntity
         MedicNeedleRefillTicks = 0;
         ContinuousHealingAccumulator = 0f;
         IsSpyCloaked = false;
+        SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;

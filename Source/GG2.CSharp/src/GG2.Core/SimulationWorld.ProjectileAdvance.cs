@@ -33,7 +33,7 @@ public sealed partial class SimulationWorld
                 if (hitResult.HitPlayer is not null)
                 {
                     RegisterBloodEffect(hitResult.HitPlayer.X, hitResult.HitPlayer.Y, MathF.Atan2(directionY, directionX) * (180f / MathF.PI) - 180f);
-                    if (hitResult.HitPlayer.ApplyDamage(ShotProjectileEntity.DamagePerHit))
+                    if (hitResult.HitPlayer.ApplyDamage(ShotProjectileEntity.DamagePerHit, PlayerEntity.SpyDamageRevealAlpha))
                     {
                         KillPlayer(hitResult.HitPlayer, killer: FindPlayerById(shot.OwnerId), weaponSpriteName: GetKillFeedWeaponSprite(FindPlayerById(shot.OwnerId)));
                     }
@@ -141,7 +141,7 @@ public sealed partial class SimulationWorld
                     {
                         RegisterBloodEffect(hitResult.HitPlayer.X, hitResult.HitPlayer.Y, MathF.Atan2(directionY, directionX) * (180f / MathF.PI) - 180f, 6);
                         hitResult.HitPlayer.AddImpulse(blade.VelocityX * 0.4f, blade.VelocityY * 0.4f);
-                        if (hitResult.HitPlayer.ApplyDamage(blade.HitDamage))
+                        if (hitResult.HitPlayer.ApplyDamage(blade.HitDamage, PlayerEntity.SpyDamageRevealAlpha))
                         {
                             KillPlayer(hitResult.HitPlayer, killer: FindPlayerById(blade.OwnerId), weaponSpriteName: "BladeS");
                         }
@@ -201,7 +201,7 @@ public sealed partial class SimulationWorld
                 if (hitResult.HitPlayer is not null)
                 {
                     RegisterBloodEffect(hitResult.HitPlayer.X, hitResult.HitPlayer.Y, MathF.Atan2(directionY, directionX) * (180f / MathF.PI) - 180f);
-                    if (hitResult.HitPlayer.ApplyDamage(NeedleProjectileEntity.DamagePerHit))
+                    if (hitResult.HitPlayer.ApplyDamage(NeedleProjectileEntity.DamagePerHit, PlayerEntity.SpyDamageRevealAlpha))
                     {
                         KillPlayer(hitResult.HitPlayer, killer: FindPlayerById(needle.OwnerId), weaponSpriteName: "MedigunS");
                     }
@@ -259,7 +259,7 @@ public sealed partial class SimulationWorld
                 if (hitResult.HitPlayer is not null)
                 {
                     RegisterBloodEffect(hitResult.HitPlayer.X, hitResult.HitPlayer.Y, MathF.Atan2(directionY, directionX) * (180f / MathF.PI) - 180f);
-                    if (hitResult.HitPlayer.ApplyDamage(RevolverProjectileEntity.DamagePerHit))
+                    if (hitResult.HitPlayer.ApplyDamage(RevolverProjectileEntity.DamagePerHit, PlayerEntity.SpyDamageRevealAlpha))
                     {
                         KillPlayer(hitResult.HitPlayer, killer: FindPlayerById(shot.OwnerId), weaponSpriteName: "RevolverS");
                     }
@@ -331,7 +331,7 @@ public sealed partial class SimulationWorld
                 if (hitResult.HitPlayer is not null)
                 {
                     RegisterBloodEffect(hitResult.HitPlayer.X, hitResult.HitPlayer.Y, mask.DirectionDegrees - 180f, 6);
-                    if (hitResult.HitPlayer.ApplyDamage(StabMaskEntity.DamagePerHit))
+                    if (hitResult.HitPlayer.ApplyDamage(StabMaskEntity.DamagePerHit, PlayerEntity.SpyDamageRevealAlpha))
                     {
                         KillPlayer(hitResult.HitPlayer, killer: owner, weaponSpriteName: "KnifeS");
                     }

@@ -31,20 +31,19 @@ internal static class CustomMapSyncService
             return false;
         }
 
-        var expectedHash = CustomMapHashService.NormalizeHash(mapContentHash);
+        var expectedHash = CustomMapHashService.ParseHash(mapContentHash);
         var mapPath = CustomMapLocatorStore.GetMapPath(normalizedLevelName);
         if (File.Exists(mapPath))
         {
-            if (expectedHash.Length == 0)
+            if (!expectedHash.HasValue)
             {
-                CacheLocator(normalizedLevelName, mapDownloadUrl);
+                CacheLocator(normalizedLevelName, mapDownloadUrl, expectedHash);
                 return true;
             }
 
-            var currentHash = CustomMapHashService.ComputeSha256(mapPath);
-            if (string.Equals(currentHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+            if (CustomMapHashService.FileMatchesHash(mapPath, expectedHash.Value))
             {
-                CacheLocator(normalizedLevelName, mapDownloadUrl);
+                CacheLocator(normalizedLevelName, mapDownloadUrl, expectedHash);
                 return true;
             }
         }
@@ -61,7 +60,7 @@ internal static class CustomMapSyncService
             return false;
         }
 
-        CacheLocator(normalizedLevelName, downloadUrl);
+        CacheLocator(normalizedLevelName, downloadUrl, expectedHash);
         return true;
     }
 
@@ -75,7 +74,7 @@ internal static class CustomMapSyncService
         return CustomMapLocatorStore.TryReadMapUrl(levelName) ?? string.Empty;
     }
 
-    private static bool TryDownloadMap(string mapDownloadUrl, string mapPath, string expectedHash, out string error)
+    private static bool TryDownloadMap(string mapDownloadUrl, string mapPath, CustomMapHashValue expectedHash, out string error)
     {
         error = string.Empty;
         if (!Uri.TryCreate(mapDownloadUrl, UriKind.Absolute, out var mapUri))
@@ -110,10 +109,9 @@ internal static class CustomMapSyncService
                 networkStream.CopyTo(fileStream);
             }
 
-            if (expectedHash.Length > 0)
+            if (expectedHash.HasValue)
             {
-                var downloadedHash = CustomMapHashService.ComputeSha256(tempPath);
-                if (!string.Equals(downloadedHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+                if (!CustomMapHashService.FileMatchesHash(tempPath, expectedHash.Value))
                 {
                     error = "Downloaded map hash does not match the server hash.";
                     return false;
@@ -143,11 +141,23 @@ internal static class CustomMapSyncService
         }
     }
 
-    private static void CacheLocator(string levelName, string mapDownloadUrl)
+    private static void CacheLocator(string levelName, string mapDownloadUrl, CustomMapHashValue expectedHash)
     {
-        if (!string.IsNullOrWhiteSpace(mapDownloadUrl))
+        if (string.IsNullOrWhiteSpace(mapDownloadUrl) && !expectedHash.HasValue)
         {
-            CustomMapLocatorStore.WriteMapUrl(levelName, mapDownloadUrl.Trim());
+            return;
         }
+
+        var existing = CustomMapLocatorStore.TryReadMapMetadata(levelName);
+        var sourceUrl = string.IsNullOrWhiteSpace(mapDownloadUrl)
+            ? existing?.SourceUrl ?? string.Empty
+            : mapDownloadUrl.Trim();
+        var md5Hash = expectedHash.Algorithm == CustomMapHashAlgorithm.Md5
+            ? expectedHash.Value
+            : existing?.Md5Hash ?? string.Empty;
+        var sha256Hash = expectedHash.Algorithm == CustomMapHashAlgorithm.Sha256
+            ? expectedHash.Value
+            : existing?.Sha256Hash ?? string.Empty;
+        CustomMapLocatorStore.WriteMapMetadata(levelName, new CustomMapLocatorMetadata(sourceUrl, md5Hash, sha256Hash));
     }
 }

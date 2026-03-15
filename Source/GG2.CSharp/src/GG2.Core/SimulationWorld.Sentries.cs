@@ -84,7 +84,7 @@ public sealed partial class SimulationWorld
             if (target.Value.Player is not null)
             {
                 RegisterBloodEffect(target.Value.Player.X, target.Value.Player.Y, sentry.AimDirectionDegrees - 180f, 2);
-                if (target.Value.Player.ApplyDamage(SentryEntity.HitDamage))
+                if (target.Value.Player.ApplyDamage(SentryEntity.HitDamage, PlayerEntity.SpyDamageRevealAlpha))
                 {
                     KillPlayer(target.Value.Player, killer: FindPlayerById(sentry.OwnerPlayerId), weaponSpriteName: "SentryTurretLogS", deathCamMessage: "You were killed by the autogun of", deathCamSentry: sentry);
                 }

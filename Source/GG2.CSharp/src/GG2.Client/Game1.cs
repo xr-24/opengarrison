@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using GG2.Core;
 using GG2.Protocol;
 
@@ -185,6 +186,11 @@ public partial class Game1 : Game
     private string _connectHostBuffer = "127.0.0.1";
     private string _connectPortBuffer = "8190";
     private string _menuStatusMessage = string.Empty;
+    private bool _devMessageCheckStarted;
+    private bool _devMessageCheckFinished;
+    private Task<DevMessageFetchResult>? _devMessageFetchTask;
+    private readonly Queue<DevMessagePopupState> _pendingDevMessagePopups = new();
+    private DevMessagePopupState? _activeDevMessagePopup;
     private string _autoBalanceNoticeText = string.Empty;
     private int _autoBalanceNoticeTicks;
     private bool _killCamEnabled = true;
@@ -363,5 +369,36 @@ public partial class Game1 : Game
         public Color Color { get; }
 
         public int TicksRemaining { get; set; }
+    }
+
+    private sealed class DevMessagePopupState
+    {
+        public DevMessagePopupState(
+            string title,
+            string message,
+            string primaryButtonLabel,
+            string secondaryButtonLabel,
+            bool canRunPrimaryAction,
+            string? primaryActionPath = null)
+        {
+            Title = title;
+            Message = message;
+            PrimaryButtonLabel = primaryButtonLabel;
+            SecondaryButtonLabel = secondaryButtonLabel;
+            CanRunPrimaryAction = canRunPrimaryAction;
+            PrimaryActionPath = primaryActionPath;
+        }
+
+        public string Title { get; }
+
+        public string Message { get; }
+
+        public string PrimaryButtonLabel { get; }
+
+        public string SecondaryButtonLabel { get; }
+
+        public bool CanRunPrimaryAction { get; }
+
+        public string? PrimaryActionPath { get; }
     }
 }

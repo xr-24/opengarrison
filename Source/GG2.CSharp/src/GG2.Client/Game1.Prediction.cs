@@ -146,6 +146,7 @@ public partial class Game1
             IsSniperScoped = player.IsSniperScoped,
             SniperChargeTicks = player.SniperChargeTicks,
             IsSpyCloaked = player.IsSpyCloaked,
+            SpyCloakAlpha = player.SpyCloakAlpha,
             IsSpyVisibleToEnemies = player.IsSpyVisibleToEnemies,
             SpyBackstabWindupTicksRemaining = player.SpyBackstabWindupTicksRemaining,
             SpyBackstabRecoveryTicksRemaining = player.SpyBackstabRecoveryTicksRemaining,
@@ -178,6 +179,7 @@ public partial class Game1
         public bool IsSniperScoped;
         public int SniperChargeTicks;
         public bool IsSpyCloaked;
+        public float SpyCloakAlpha;
         public bool IsSpyVisibleToEnemies;
         public int SpyBackstabWindupTicksRemaining;
         public int SpyBackstabRecoveryTicksRemaining;

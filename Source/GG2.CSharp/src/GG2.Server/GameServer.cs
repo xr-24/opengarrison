@@ -42,6 +42,7 @@ sealed class GameServer
     private readonly int _lobbyResolveSeconds;
     private readonly string? _requestedMap;
     private readonly string? _mapRotationFile;
+    private readonly string _eventLogPath;
     private readonly IReadOnlyList<string> _stockMapRotation;
     private readonly int _maxPlayableClients;
     private readonly int _maxTotalClients;
@@ -70,6 +71,7 @@ sealed class GameServer
     private ServerSessionManager _sessionManager = null!;
     private GG2.Server.PluginCommandRegistry _pluginCommandRegistry = null!;
     private GG2.Server.PluginHost? _pluginHost;
+    private PersistentServerEventLog? _eventLog;
     private AutoBalancer _autoBalancer = null!;
     private SnapshotBroadcaster _snapshotBroadcaster = null!;
     private MapRotationManager _mapRotationManager = null!;
@@ -83,6 +85,7 @@ sealed class GameServer
     private int _lastObservedBlueCaps;
     private MatchPhase _lastObservedMatchPhase;
     private int _lastObservedKillFeedCount;
+    private readonly Dictionary<int, int> _lastObservedPlayerCapsById = new();
 
     public GameServer(
         SimulationConfig config,
@@ -97,6 +100,7 @@ sealed class GameServer
         int lobbyResolveSeconds,
         string? requestedMap,
         string? mapRotationFile,
+        string eventLogPath,
         IReadOnlyList<string> stockMapRotation,
         int maxPlayableClients,
         int maxTotalClients,
@@ -124,6 +128,7 @@ sealed class GameServer
         _lobbyResolveSeconds = lobbyResolveSeconds;
         _requestedMap = requestedMap;
         _mapRotationFile = mapRotationFile;
+        _eventLogPath = eventLogPath;
         _stockMapRotation = stockMapRotation;
         _maxPlayableClients = maxPlayableClients;
         _maxTotalClients = maxTotalClients;
@@ -174,10 +179,7 @@ sealed class GameServer
         _mapRotationManager = new MapRotationManager(_world, _requestedMap, _mapRotationFile, _stockMapRotation, Console.WriteLine);
         _world.DespawnEnemyDummy();
         _world.TryPrepareNetworkPlayerJoin(SimulationWorld.LocalPlayerSlot);
-        _lastObservedRedCaps = _world.RedCaps;
-        _lastObservedBlueCaps = _world.BlueCaps;
-        _lastObservedMatchPhase = _world.MatchState.Phase;
-        _lastObservedKillFeedCount = _world.KillFeed.Count;
+        ResetObservedGameplayState();
 
         _simulator = new FixedStepSimulator(_world);
         _clock = Stopwatch.StartNew();
@@ -222,6 +224,7 @@ sealed class GameServer
             _clientsBySlot,
             _transientEventReplayTicks,
             SendSnapshotPayload);
+        _eventLog = new PersistentServerEventLog(_eventLogPath, Console.WriteLine);
         InitializePluginRuntime();
         _pluginHost?.LoadPlugins();
         _pluginHost?.NotifyServerStarting();
@@ -250,6 +253,7 @@ sealed class GameServer
         Console.WriteLine($"Auto-balance: {(_autoBalanceEnabled ? "Enabled" : "Disabled")}");
         Console.WriteLine($"Level: {_world.Level.Name} area={_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount} imported={_world.Level.ImportedFromSource} mode={_world.MatchRules.Mode}");
         Console.WriteLine($"World bounds: {_world.Bounds.Width}x{_world.Bounds.Height}");
+        Console.WriteLine($"Event log: {_eventLog?.FilePath ?? _eventLogPath}");
         Console.WriteLine(_passwordRequired ? "[server] password required" : "[server] no password set");
         if (_useLobbyServer)
         {
@@ -266,6 +270,20 @@ sealed class GameServer
             Console.WriteLine(line);
         }
         Console.WriteLine("Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.");
+        LogServerEvent(
+            "server_started",
+            ("server_name", _serverName),
+            ("port", _port),
+            ("tick_rate", _config.TicksPerSecond),
+            ("max_playable_clients", _maxPlayableClients),
+            ("max_total_clients", _maxTotalClients),
+            ("max_spectator_clients", _maxSpectatorClients),
+            ("password_required", _passwordRequired),
+            ("use_lobby_server", _useLobbyServer),
+            ("map_name", _world.Level.Name),
+            ("map_area_index", _world.Level.MapAreaIndex),
+            ("map_area_count", _world.Level.MapAreaCount),
+            ("mode", _world.MatchRules.Mode));
         _pluginHost?.NotifyServerStarted();
 
         try
@@ -293,6 +311,7 @@ sealed class GameServer
                         if (_mapRotationManager.TryApplyPendingMapChange(out var transition))
                         {
                             NotifyMapTransition(transition);
+                            ResetObservedGameplayState();
                             _snapshotBroadcaster.ResetTransientEvents();
                         }
                     },
@@ -300,7 +319,7 @@ sealed class GameServer
                 _lobbyRegistrar?.Tick(now, BuildLobbyServerName(_serverName, _world, _clientsBySlot, _passwordRequired, _maxPlayableClients));
                 if (ticks > 0)
                 {
-                    PublishGameplayPluginEvents();
+                    PublishGameplayEvents();
                 }
 
                 if (ticks > 0 && _world.Frame % _config.TicksPerSecond == 0)
@@ -318,10 +337,18 @@ sealed class GameServer
         }
         finally
         {
+            LogServerEvent(
+                "server_stopping",
+                ("server_name", _serverName),
+                ("port", _port),
+                ("uptime_seconds", _clock?.Elapsed.TotalSeconds ?? 0d),
+                ("frame", _world?.Frame ?? 0L));
             _pluginHost?.NotifyServerStopping();
             NotifyClientsOfShutdown();
             _pluginHost?.NotifyServerStopped();
             _pluginHost?.ShutdownPlugins();
+            _eventLog?.Dispose();
+            _eventLog = null;
             Console.WriteLine("[server] shutdown complete.");
         }
     }
@@ -527,6 +554,14 @@ sealed class GameServer
         _helloRateLimiter.Reset(remoteEndPoint);
         _passwordRateLimiter.Reset(remoteEndPoint);
         Console.WriteLine($"[server] client connected {remoteEndPoint} slot={assignedSlot} name=\"{hello.Name}\" version={hello.Version}");
+        LogServerEvent(
+            "client_connected",
+            ("slot", assignedSlot),
+            ("player_name", hello.Name),
+            ("endpoint", remoteEndPoint.ToString()),
+            ("is_authorized", client.IsAuthorized),
+            ("is_spectator", IsSpectatorSlot(assignedSlot)),
+            ("version", hello.Version));
         _pluginHost?.NotifyClientConnected(new ClientConnectedEvent(
             assignedSlot,
             hello.Name,
@@ -679,6 +714,12 @@ sealed class GameServer
         var team = SimulationWorld.IsPlayableNetworkPlayerSlot(client.Slot) && _world.TryGetNetworkPlayer(client.Slot, out var player)
             ? (byte)player.Team
             : (byte)0;
+        LogServerEvent(
+            "chat_received",
+            ("slot", client.Slot),
+            ("player_name", client.Name),
+            ("team", team == 0 ? null : ((PlayerTeam)team).ToString()),
+            ("text", sanitized));
         _pluginHost?.NotifyChatReceived(new ChatReceivedEvent(
             client.Slot,
             client.Name,
@@ -1146,8 +1187,73 @@ sealed class GameServer
         ];
     }
 
+    private void ResetObservedGameplayState()
+    {
+        _lastObservedRedCaps = _world.RedCaps;
+        _lastObservedBlueCaps = _world.BlueCaps;
+        _lastObservedMatchPhase = _world.MatchState.Phase;
+        _lastObservedKillFeedCount = _world.KillFeed.Count;
+        _lastObservedPlayerCapsById.Clear();
+        foreach (var (_, player) in _world.EnumerateActiveNetworkPlayers())
+        {
+            _lastObservedPlayerCapsById[player.Id] = player.Caps;
+        }
+    }
+
+    private void LogServerEvent(string eventName, params (string Key, object? Value)[] fields)
+    {
+        _eventLog?.Write(eventName, fields);
+    }
+
+    private void PublishPlayerCapEvents()
+    {
+        var activePlayerIds = new HashSet<int>();
+        foreach (var (slot, player) in _world.EnumerateActiveNetworkPlayers())
+        {
+            activePlayerIds.Add(player.Id);
+            var previousCaps = _lastObservedPlayerCapsById.GetValueOrDefault(player.Id, player.Caps);
+            if (player.Caps > previousCaps)
+            {
+                for (var capsAwarded = previousCaps; capsAwarded < player.Caps; capsAwarded += 1)
+                {
+                    LogServerEvent(
+                        "player_cap_awarded",
+                        ("frame", _world.Frame),
+                        ("slot", slot),
+                        ("player_id", player.Id),
+                        ("player_name", player.DisplayName),
+                        ("team", player.Team),
+                        ("caps_total", capsAwarded + 1),
+                        ("mode", _world.MatchRules.Mode),
+                        ("red_caps", _world.RedCaps),
+                        ("blue_caps", _world.BlueCaps));
+                }
+            }
+
+            _lastObservedPlayerCapsById[player.Id] = player.Caps;
+        }
+
+        if (_lastObservedPlayerCapsById.Count == activePlayerIds.Count)
+        {
+            return;
+        }
+
+        var stalePlayerIds = _lastObservedPlayerCapsById.Keys.Where(playerId => !activePlayerIds.Contains(playerId)).ToArray();
+        for (var index = 0; index < stalePlayerIds.Length; index += 1)
+        {
+            _lastObservedPlayerCapsById.Remove(stalePlayerIds[index]);
+        }
+    }
+
     private void OnClientRemoved(ClientSession client, string reason)
     {
+        LogServerEvent(
+            "client_disconnected",
+            ("slot", client.Slot),
+            ("player_name", client.Name),
+            ("endpoint", client.EndPoint.ToString()),
+            ("reason", reason),
+            ("was_authorized", client.IsAuthorized));
         _pluginHost?.NotifyClientDisconnected(new ClientDisconnectedEvent(
             client.Slot,
             client.Name,
@@ -1158,6 +1264,11 @@ sealed class GameServer
 
     private void OnPasswordAccepted(ClientSession client)
     {
+        LogServerEvent(
+            "password_accepted",
+            ("slot", client.Slot),
+            ("player_name", client.Name),
+            ("endpoint", client.EndPoint.ToString()));
         _pluginHost?.NotifyPasswordAccepted(new PasswordAcceptedEvent(
             client.Slot,
             client.Name,
@@ -1166,16 +1277,35 @@ sealed class GameServer
 
     private void OnPlayerTeamChanged(ClientSession client, PlayerTeam team)
     {
+        LogServerEvent(
+            "player_team_changed",
+            ("slot", client.Slot),
+            ("player_name", client.Name),
+            ("team", team));
         _pluginHost?.NotifyPlayerTeamChanged(new PlayerTeamChangedEvent(client.Slot, client.Name, team));
     }
 
     private void OnPlayerClassChanged(ClientSession client, PlayerClass playerClass)
     {
+        LogServerEvent(
+            "player_class_changed",
+            ("slot", client.Slot),
+            ("player_name", client.Name),
+            ("player_class", playerClass));
         _pluginHost?.NotifyPlayerClassChanged(new PlayerClassChangedEvent(client.Slot, client.Name, playerClass));
     }
 
     private void NotifyMapTransition(MapChangeTransition transition)
     {
+        LogServerEvent(
+            "map_changing",
+            ("current_level_name", transition.CurrentLevelName),
+            ("current_area_index", transition.CurrentAreaIndex),
+            ("current_area_count", transition.CurrentAreaCount),
+            ("next_level_name", transition.NextLevelName),
+            ("next_area_index", transition.NextAreaIndex),
+            ("preserve_player_stats", transition.PreservePlayerStats),
+            ("winner_team", transition.WinnerTeam?.ToString()));
         _pluginHost?.NotifyMapChanging(new MapChangingEvent(
             transition.CurrentLevelName,
             transition.CurrentAreaIndex,
@@ -1184,6 +1314,12 @@ sealed class GameServer
             transition.NextAreaIndex,
             transition.PreservePlayerStats,
             transition.WinnerTeam));
+        LogServerEvent(
+            "map_changed",
+            ("level_name", _world.Level.Name),
+            ("area_index", _world.Level.MapAreaIndex),
+            ("area_count", _world.Level.MapAreaCount),
+            ("mode", _world.MatchRules.Mode));
         _pluginHost?.NotifyMapChanged(new MapChangedEvent(
             _world.Level.Name,
             _world.Level.MapAreaIndex,
@@ -1216,16 +1352,21 @@ sealed class GameServer
         return (_cachedIsCustomMap, _cachedMapDownloadUrl, _cachedMapContentHash);
     }
 
-    private void PublishGameplayPluginEvents()
+    private void PublishGameplayEvents()
     {
-        if (_pluginHost is null)
-        {
-            return;
-        }
+        PublishPlayerCapEvents();
 
         if (_world.RedCaps != _lastObservedRedCaps || _world.BlueCaps != _lastObservedBlueCaps)
         {
-            _pluginHost.NotifyScoreChanged(new ScoreChangedEvent(_world.RedCaps, _world.BlueCaps, _world.MatchRules.Mode));
+            LogServerEvent(
+                "score_changed",
+                ("frame", _world.Frame),
+                ("mode", _world.MatchRules.Mode),
+                ("red_caps", _world.RedCaps),
+                ("blue_caps", _world.BlueCaps),
+                ("previous_red_caps", _lastObservedRedCaps),
+                ("previous_blue_caps", _lastObservedBlueCaps));
+            _pluginHost?.NotifyScoreChanged(new ScoreChangedEvent(_world.RedCaps, _world.BlueCaps, _world.MatchRules.Mode));
             _lastObservedRedCaps = _world.RedCaps;
             _lastObservedBlueCaps = _world.BlueCaps;
         }
@@ -1239,7 +1380,16 @@ sealed class GameServer
         for (var index = _lastObservedKillFeedCount; index < killFeed.Count; index += 1)
         {
             var entry = killFeed[index];
-            _pluginHost.NotifyKillFeedEntry(new KillFeedEvent(
+            LogServerEvent(
+                "kill",
+                ("frame", _world.Frame),
+                ("killer_name", entry.KillerName),
+                ("killer_team", entry.KillerTeam),
+                ("weapon_sprite_name", entry.WeaponSpriteName),
+                ("victim_name", entry.VictimName),
+                ("victim_team", entry.VictimTeam),
+                ("message_text", entry.MessageText));
+            _pluginHost?.NotifyKillFeedEntry(new KillFeedEvent(
                 entry.KillerName,
                 entry.KillerTeam,
                 entry.WeaponSpriteName,
@@ -1252,7 +1402,14 @@ sealed class GameServer
 
         if (_lastObservedMatchPhase != MatchPhase.Ended && _world.MatchState.Phase == MatchPhase.Ended)
         {
-            _pluginHost.NotifyRoundEnded(new RoundEndedEvent(
+            LogServerEvent(
+                "round_ended",
+                ("frame", _world.Frame),
+                ("mode", _world.MatchRules.Mode),
+                ("winner_team", _world.MatchState.WinnerTeam?.ToString()),
+                ("red_caps", _world.RedCaps),
+                ("blue_caps", _world.BlueCaps));
+            _pluginHost?.NotifyRoundEnded(new RoundEndedEvent(
                 _world.MatchRules.Mode,
                 _world.MatchState.WinnerTeam,
                 _world.RedCaps,
