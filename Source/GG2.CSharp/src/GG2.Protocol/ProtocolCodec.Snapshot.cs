@@ -14,6 +14,9 @@ public static partial class ProtocolCodec
         WriteString(writer, snapshot.LevelName, MaxLevelNameBytes, nameof(snapshot.LevelName));
         writer.Write(snapshot.MapAreaIndex);
         writer.Write(snapshot.MapAreaCount);
+        writer.Write(snapshot.IsCustomMap);
+        WriteString(writer, snapshot.MapDownloadUrl, MaxMapUrlBytes, nameof(snapshot.MapDownloadUrl));
+        WriteString(writer, snapshot.MapContentHash, MaxMapHashBytes, nameof(snapshot.MapContentHash));
         writer.Write(snapshot.GameMode);
         writer.Write(snapshot.MatchPhase);
         writer.Write(snapshot.WinnerTeam);
@@ -68,6 +71,9 @@ public static partial class ProtocolCodec
         var levelName = ReadString(reader, MaxLevelNameBytes);
         var mapAreaIndex = reader.ReadByte();
         var mapAreaCount = reader.ReadByte();
+        var isCustomMap = reader.ReadBoolean();
+        var mapDownloadUrl = ReadString(reader, MaxMapUrlBytes);
+        var mapContentHash = ReadString(reader, MaxMapHashBytes);
         var gameMode = reader.ReadByte();
         var matchPhase = reader.ReadByte();
         var winnerTeam = reader.ReadByte();
@@ -148,7 +154,10 @@ public static partial class ProtocolCodec
             deathCam,
             killFeed,
             visualEvents,
-            soundEvents)
+            soundEvents,
+            isCustomMap,
+            mapDownloadUrl,
+            mapContentHash)
         {
             BaselineFrame = baselineFrame,
             IsDelta = isDelta,

@@ -37,3 +37,12 @@ public interface IGg2ServerMapHooks
 
     void OnMapChanged(MapChangedEvent e);
 }
+
+public interface IGg2ServerGameplayHooks
+{
+    void OnScoreChanged(ScoreChangedEvent e);
+
+    void OnRoundEnded(RoundEndedEvent e);
+
+    void OnKillFeedEntry(KillFeedEvent e);
+}

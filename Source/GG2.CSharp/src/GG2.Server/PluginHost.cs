@@ -82,6 +82,12 @@ internal sealed class PluginHost
 
     public void NotifyMapChanged(MapChangedEvent e) => Dispatch<IGg2ServerMapHooks>(hook => hook.OnMapChanged(e));
 
+    public void NotifyScoreChanged(ScoreChangedEvent e) => Dispatch<IGg2ServerGameplayHooks>(hook => hook.OnScoreChanged(e));
+
+    public void NotifyRoundEnded(RoundEndedEvent e) => Dispatch<IGg2ServerGameplayHooks>(hook => hook.OnRoundEnded(e));
+
+    public void NotifyKillFeedEntry(KillFeedEvent e) => Dispatch<IGg2ServerGameplayHooks>(hook => hook.OnKillFeedEntry(e));
+
     public void ShutdownPlugins()
     {
         for (var index = _loadedPlugins.Count - 1; index >= 0; index -= 1)

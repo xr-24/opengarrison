@@ -24,6 +24,15 @@ public sealed partial class SimulationWorld
         MatchState = CreateInitialMatchState(MatchRules);
     }
 
+    public void SetCapLimit(int capLimit)
+    {
+        _configuredCapLimit = Math.Clamp(capLimit, 1, 255);
+        MatchRules = MatchRules with
+        {
+            CapLimit = _configuredCapLimit,
+        };
+    }
+
     public bool TryLoadLevel(string levelName)
     {
         return TryLoadLevel(levelName, mapAreaIndex: 1, preservePlayerStats: false);
@@ -114,6 +123,8 @@ public sealed partial class SimulationWorld
             {
                 player.ResetRoundStats();
             }
+
+            ResetPlayersToAwaitingJoinForFreshMap();
         }
 
         MatchState = CreateInitialMatchState(MatchRules);
@@ -208,6 +219,30 @@ public sealed partial class SimulationWorld
         }
 
         entities.Clear();
+    }
+
+    private void ResetPlayersToAwaitingJoinForFreshMap()
+    {
+        for (var index = 0; index < NetworkPlayerSlots.Count; index += 1)
+        {
+            var slot = NetworkPlayerSlots[index];
+            if (slot != LocalPlayerSlot && !IsNetworkPlayerEnabled(slot))
+            {
+                continue;
+            }
+
+            if (!TryGetNetworkPlayer(slot, out var player))
+            {
+                continue;
+            }
+
+            TryDropCarriedIntel(player);
+            TrySetNetworkPlayerAwaitingJoin(slot, true);
+            TrySetNetworkPlayerRespawnTicks(slot, 0);
+            SetNetworkPlayerDeathCam(slot, null);
+            player.ClearMedicHealingTarget();
+            player.Kill();
+        }
     }
 
 }

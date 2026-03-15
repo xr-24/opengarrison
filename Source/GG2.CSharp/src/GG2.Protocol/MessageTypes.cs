@@ -62,7 +62,10 @@ public sealed record WelcomeMessage(
     int Version,
     int TickRate,
     string LevelName,
-    byte PlayerSlot) : IProtocolMessage
+    byte PlayerSlot,
+    bool IsCustomMap = false,
+    string MapDownloadUrl = "",
+    string MapContentHash = "") : IProtocolMessage
 {
     public MessageType Type => MessageType.Welcome;
 }
@@ -412,7 +415,10 @@ public sealed record SnapshotMessage(
     SnapshotDeathCamState? LocalDeathCam,
     IReadOnlyList<SnapshotKillFeedEntry> KillFeed,
     IReadOnlyList<SnapshotVisualEvent> VisualEvents,
-    IReadOnlyList<SnapshotSoundEvent> SoundEvents) : IProtocolMessage
+    IReadOnlyList<SnapshotSoundEvent> SoundEvents,
+    bool IsCustomMap = false,
+    string MapDownloadUrl = "",
+    string MapContentHash = "") : IProtocolMessage
 {
     public ulong BaselineFrame { get; init; }
     public bool IsDelta { get; init; }

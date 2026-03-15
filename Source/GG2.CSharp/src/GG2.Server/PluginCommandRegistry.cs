@@ -57,7 +57,25 @@ internal sealed class PluginCommandRegistry
             return false;
         }
 
-        responseLines = registration.Command.ExecuteAsync(context, arguments, cancellationToken).GetAwaiter().GetResult();
+        try
+        {
+            responseLines = registration.Command.ExecuteAsync(context, arguments, cancellationToken).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            responseLines =
+            [
+                $"[server] command \"{registration.Command.Name}\" was canceled."
+            ];
+        }
+        catch (Exception ex)
+        {
+            responseLines =
+            [
+                $"[server] command \"{registration.Command.Name}\" failed: {ex.Message}"
+            ];
+        }
+
         return true;
     }
 

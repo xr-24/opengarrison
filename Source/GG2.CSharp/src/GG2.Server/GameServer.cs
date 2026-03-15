@@ -75,6 +75,14 @@ sealed class GameServer
     private MapRotationManager _mapRotationManager = null!;
     private EndpointRateLimiter _helloRateLimiter = null!;
     private EndpointRateLimiter _passwordRateLimiter = null!;
+    private string _cachedMapMetadataLevelName = string.Empty;
+    private bool _cachedIsCustomMap;
+    private string _cachedMapDownloadUrl = string.Empty;
+    private string _cachedMapContentHash = string.Empty;
+    private int _lastObservedRedCaps;
+    private int _lastObservedBlueCaps;
+    private MatchPhase _lastObservedMatchPhase;
+    private int _lastObservedKillFeedCount;
 
     public GameServer(
         SimulationConfig config,
@@ -166,6 +174,10 @@ sealed class GameServer
         _mapRotationManager = new MapRotationManager(_world, _requestedMap, _mapRotationFile, _stockMapRotation, Console.WriteLine);
         _world.DespawnEnemyDummy();
         _world.TryPrepareNetworkPlayerJoin(SimulationWorld.LocalPlayerSlot);
+        _lastObservedRedCaps = _world.RedCaps;
+        _lastObservedBlueCaps = _world.BlueCaps;
+        _lastObservedMatchPhase = _world.MatchState.Phase;
+        _lastObservedKillFeedCount = _world.KillFeed.Count;
 
         _simulator = new FixedStepSimulator(_world);
         _clock = Stopwatch.StartNew();
@@ -286,6 +298,10 @@ sealed class GameServer
                     },
                     _snapshotBroadcaster.BroadcastSnapshot);
                 _lobbyRegistrar?.Tick(now, BuildLobbyServerName(_serverName, _world, _clientsBySlot, _passwordRequired, _maxPlayableClients));
+                if (ticks > 0)
+                {
+                    PublishGameplayPluginEvents();
+                }
 
                 if (ticks > 0 && _world.Frame % _config.TicksPerSecond == 0)
                 {
@@ -446,7 +462,16 @@ sealed class GameServer
             existingClient.Name = hello.Name;
             existingClient.LastSeen = _clock.Elapsed;
             _sessionManager.ApplyClientName(existingClient.Slot, hello.Name);
-            SendMessage(remoteEndPoint, new WelcomeMessage(_serverName, ProtocolVersion.Current, _config.TicksPerSecond, _world.Level.Name, existingClient.Slot));
+            var existingMapMetadata = GetCurrentMapMetadata();
+            SendMessage(remoteEndPoint, new WelcomeMessage(
+                _serverName,
+                ProtocolVersion.Current,
+                _config.TicksPerSecond,
+                _world.Level.Name,
+                existingClient.Slot,
+                existingMapMetadata.IsCustomMap,
+                existingMapMetadata.MapDownloadUrl,
+                existingMapMetadata.MapContentHash));
             if (_passwordRequired && !existingClient.IsAuthorized)
             {
                 SendMessage(remoteEndPoint, new PasswordRequestMessage());
@@ -482,12 +507,16 @@ sealed class GameServer
             _world.TryPrepareNetworkPlayerJoin(assignedSlot);
         }
 
+        var mapMetadata = GetCurrentMapMetadata();
         var welcome = new WelcomeMessage(
             _serverName,
             ProtocolVersion.Current,
             _config.TicksPerSecond,
             _world.Level.Name,
-            assignedSlot);
+            assignedSlot,
+            mapMetadata.IsCustomMap,
+            mapMetadata.MapDownloadUrl,
+            mapMetadata.MapContentHash);
         SendMessage(remoteEndPoint, welcome);
         if (_passwordRequired && !client.IsAuthorized)
         {
@@ -848,6 +877,22 @@ sealed class GameServer
                 return Task.FromResult<IReadOnlyList<string>>(lines);
             });
         _pluginCommandRegistry.RegisterBuiltIn(
+            "caplimit",
+            "Set the capture limit.",
+            "caplimit <1-255>",
+            (context, arguments, _) =>
+            {
+                if (!TryParseBoundedInt(arguments, min: 1, max: 255, out var capLimit))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: caplimit <1-255>"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TrySetCapLimit(capLimit)
+                    ? [$"[server] cap limit set to {capLimit}."]
+                    : ["[server] unable to set cap limit."]);
+            },
+            "cap");
+        _pluginCommandRegistry.RegisterBuiltIn(
             "lobby",
             "Show lobby registration state.",
             "lobby",
@@ -873,6 +918,201 @@ sealed class GameServer
             "List loaded server plugins.",
             "plugins",
             (context, _, _) => Task.FromResult<IReadOnlyList<string>>(BuildPluginLines()));
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "say",
+            "Broadcast a system chat message.",
+            "say <text>",
+            (context, arguments, _) =>
+            {
+                if (string.IsNullOrWhiteSpace(arguments))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: say <text>"]);
+                }
+
+                context.AdminOperations.BroadcastSystemMessage(arguments);
+                return Task.FromResult<IReadOnlyList<string>>(["[server] system message sent."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "kick",
+            "Disconnect a player slot.",
+            "kick <slot> [reason]",
+            (context, arguments, _) =>
+            {
+                if (!TryParseSlotAndOptionalArgument(arguments, out var slot, out var reason))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: kick <slot> [reason]"]);
+                }
+
+                var finalReason = string.IsNullOrWhiteSpace(reason) ? "Kicked by admin." : reason;
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TryDisconnect(slot, finalReason)
+                    ? [$"[server] kicked slot {slot}."]
+                    : [$"[server] no client at slot {slot}."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "spectate",
+            "Move a player to spectator.",
+            "spectate <slot>",
+            (context, arguments, _) =>
+            {
+                if (!TryParseSlot(arguments, out var slot))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: spectate <slot>"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TryMoveToSpectator(slot)
+                    ? [$"[server] moved slot {slot} to spectator."]
+                    : [$"[server] unable to move slot {slot} to spectator."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "team",
+            "Set a player's team.",
+            "team <slot> <red|blue>",
+            (context, arguments, _) =>
+            {
+                if (!TryParseSlotAndRequiredArgument(arguments, out var slot, out var teamText)
+                    || !TryParseTeam(teamText, out var team))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: team <slot> <red|blue>"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TrySetTeam(slot, team)
+                    ? [$"[server] slot {slot} set to {team}."]
+                    : [$"[server] unable to set team for slot {slot}."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "class",
+            "Set a player's class.",
+            "class <slot> <scout|engineer|pyro|soldier|demoman|heavy|sniper|medic|spy|quote>",
+            (context, arguments, _) =>
+            {
+                if (!TryParseSlotAndRequiredArgument(arguments, out var slot, out var classText)
+                    || !Enum.TryParse<PlayerClass>(classText, ignoreCase: true, out var playerClass))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: class <slot> <class>"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TrySetClass(slot, playerClass)
+                    ? [$"[server] slot {slot} class set to {playerClass}."]
+                    : [$"[server] unable to set class for slot {slot}."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "kill",
+            "Kill a playable slot's current character.",
+            "kill <slot>",
+            (context, arguments, _) =>
+            {
+                if (!TryParseSlot(arguments, out var slot))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: kill <slot>"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TryForceKill(slot)
+                    ? [$"[server] killed slot {slot}."]
+                    : [$"[server] unable to kill slot {slot}."]);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "changemap",
+            "Change to another map.",
+            "changemap <mapName> [area]",
+            (context, arguments, _) =>
+            {
+                if (!TryParseMapChangeArguments(arguments, out var levelName, out var areaIndex))
+                {
+                    return Task.FromResult<IReadOnlyList<string>>(["[server] usage: changemap <mapName> [area]"]);
+                }
+
+                return Task.FromResult<IReadOnlyList<string>>(context.AdminOperations.TryChangeMap(levelName, areaIndex, preservePlayerStats: false)
+                    ? [$"[server] changed map to {levelName} area {areaIndex}."]
+                    : [$"[server] unable to change map to {levelName} area {areaIndex}."]);
+            },
+            "mapchange");
+    }
+
+    private static bool TryParseBoundedInt(string text, int min, int max, out int value)
+    {
+        value = 0;
+        var trimmed = text.Trim();
+        return int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out value)
+            && value >= min
+            && value <= max;
+    }
+
+    private static bool TryParseSlot(string text, out byte slot)
+    {
+        slot = 0;
+        var trimmed = text.Trim();
+        return byte.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out slot) && slot > 0;
+    }
+
+    private static bool TryParseSlotAndOptionalArgument(string arguments, out byte slot, out string argument)
+    {
+        slot = 0;
+        argument = string.Empty;
+        var parts = arguments.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0 || !TryParseSlot(parts[0], out slot))
+        {
+            return false;
+        }
+
+        argument = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        return true;
+    }
+
+    private static bool TryParseSlotAndRequiredArgument(string arguments, out byte slot, out string argument)
+    {
+        slot = 0;
+        argument = string.Empty;
+        var parts = arguments.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !TryParseSlot(parts[0], out slot))
+        {
+            return false;
+        }
+
+        argument = parts[1].Trim();
+        return argument.Length > 0;
+    }
+
+    private static bool TryParseTeam(string text, out PlayerTeam team)
+    {
+        team = default;
+        var normalized = text.Trim();
+        if (normalized.Equals("red", StringComparison.OrdinalIgnoreCase))
+        {
+            team = PlayerTeam.Red;
+            return true;
+        }
+
+        if (normalized.Equals("blue", StringComparison.OrdinalIgnoreCase) || normalized.Equals("blu", StringComparison.OrdinalIgnoreCase))
+        {
+            team = PlayerTeam.Blue;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseMapChangeArguments(string arguments, out string levelName, out int areaIndex)
+    {
+        levelName = string.Empty;
+        areaIndex = 1;
+        var parts = arguments.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return false;
+        }
+
+        levelName = parts[0].Trim();
+        if (levelName.Length == 0)
+        {
+            return false;
+        }
+
+        if (parts.Length < 2)
+        {
+            return true;
+        }
+
+        return int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out areaIndex) && areaIndex >= 1;
     }
 
     private IReadOnlyList<string> BuildHelpLines()
@@ -949,5 +1189,77 @@ sealed class GameServer
             _world.Level.MapAreaIndex,
             _world.Level.MapAreaCount,
             _world.MatchRules.Mode));
+    }
+
+    private (bool IsCustomMap, string MapDownloadUrl, string MapContentHash) GetCurrentMapMetadata()
+    {
+        var levelName = _world.Level.Name;
+        if (string.Equals(_cachedMapMetadataLevelName, levelName, StringComparison.OrdinalIgnoreCase))
+        {
+            return (_cachedIsCustomMap, _cachedMapDownloadUrl, _cachedMapContentHash);
+        }
+
+        _cachedMapMetadataLevelName = levelName;
+        if (CustomMapDescriptorResolver.TryResolve(levelName, out var descriptor))
+        {
+            _cachedIsCustomMap = true;
+            _cachedMapDownloadUrl = descriptor.SourceUrl;
+            _cachedMapContentHash = descriptor.ContentHash;
+        }
+        else
+        {
+            _cachedIsCustomMap = false;
+            _cachedMapDownloadUrl = string.Empty;
+            _cachedMapContentHash = string.Empty;
+        }
+
+        return (_cachedIsCustomMap, _cachedMapDownloadUrl, _cachedMapContentHash);
+    }
+
+    private void PublishGameplayPluginEvents()
+    {
+        if (_pluginHost is null)
+        {
+            return;
+        }
+
+        if (_world.RedCaps != _lastObservedRedCaps || _world.BlueCaps != _lastObservedBlueCaps)
+        {
+            _pluginHost.NotifyScoreChanged(new ScoreChangedEvent(_world.RedCaps, _world.BlueCaps, _world.MatchRules.Mode));
+            _lastObservedRedCaps = _world.RedCaps;
+            _lastObservedBlueCaps = _world.BlueCaps;
+        }
+
+        var killFeed = _world.KillFeed;
+        if (killFeed.Count < _lastObservedKillFeedCount)
+        {
+            _lastObservedKillFeedCount = 0;
+        }
+
+        for (var index = _lastObservedKillFeedCount; index < killFeed.Count; index += 1)
+        {
+            var entry = killFeed[index];
+            _pluginHost.NotifyKillFeedEntry(new KillFeedEvent(
+                entry.KillerName,
+                entry.KillerTeam,
+                entry.WeaponSpriteName,
+                entry.VictimName,
+                entry.VictimTeam,
+                entry.MessageText));
+        }
+
+        _lastObservedKillFeedCount = killFeed.Count;
+
+        if (_lastObservedMatchPhase != MatchPhase.Ended && _world.MatchState.Phase == MatchPhase.Ended)
+        {
+            _pluginHost.NotifyRoundEnded(new RoundEndedEvent(
+                _world.MatchRules.Mode,
+                _world.MatchState.WinnerTeam,
+                _world.RedCaps,
+                _world.BlueCaps,
+                _world.Frame));
+        }
+
+        _lastObservedMatchPhase = _world.MatchState.Phase;
     }
 }

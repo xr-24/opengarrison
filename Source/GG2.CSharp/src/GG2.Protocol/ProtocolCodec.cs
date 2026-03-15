@@ -9,6 +9,8 @@ public static partial class ProtocolCodec
     private const int MaxPlayerNameBytes = 80;
     private const int MaxServerNameBytes = 128;
     private const int MaxLevelNameBytes = 64;
+    private const int MaxMapUrlBytes = 512;
+    private const int MaxMapHashBytes = 96;
     private const int MaxReasonBytes = 128;
     private const int MaxPasswordBytes = 64;
     private const int MaxChatBytes = 180;
@@ -34,6 +36,9 @@ public static partial class ProtocolCodec
                 writer.Write(welcome.TickRate);
                 WriteString(writer, welcome.LevelName, MaxLevelNameBytes, nameof(welcome.LevelName));
                 writer.Write(welcome.PlayerSlot);
+                writer.Write(welcome.IsCustomMap);
+                WriteString(writer, welcome.MapDownloadUrl, MaxMapUrlBytes, nameof(welcome.MapDownloadUrl));
+                WriteString(writer, welcome.MapContentHash, MaxMapHashBytes, nameof(welcome.MapContentHash));
                 break;
             case ConnectionDeniedMessage denied:
                 WriteString(writer, denied.Reason, MaxReasonBytes, nameof(denied.Reason));
@@ -128,7 +133,10 @@ public static partial class ProtocolCodec
                     reader.ReadInt32(),
                     reader.ReadInt32(),
                     ReadString(reader, MaxLevelNameBytes),
-                    reader.ReadByte()),
+                    reader.ReadByte(),
+                    reader.ReadBoolean(),
+                    ReadString(reader, MaxMapUrlBytes),
+                    ReadString(reader, MaxMapHashBytes)),
                 MessageType.ConnectionDenied => new ConnectionDeniedMessage(ReadString(reader, MaxReasonBytes)),
                 MessageType.PasswordRequest => new PasswordRequestMessage(),
                 MessageType.PasswordSubmit => new PasswordSubmitMessage(ReadString(reader, MaxPasswordBytes)),

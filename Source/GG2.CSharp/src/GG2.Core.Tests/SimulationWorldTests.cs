@@ -144,6 +144,26 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
+    public void SetCapLimit_UpdatesRuleWithoutResettingRoundState()
+    {
+        var world = CreateWorld();
+        var ownBase = world.Level.GetIntelBase(world.LocalPlayerTeam);
+
+        Assert.True(ownBase.HasValue);
+        Assert.True(world.ForceGiveEnemyIntelToLocalPlayer());
+        world.TeleportLocalPlayer(ownBase.Value.X, ownBase.Value.Y);
+        world.AdvanceOneTick();
+        Assert.Equal(1, world.RedCaps);
+
+        world.SetCapLimit(8);
+
+        Assert.Equal(8, world.MatchRules.CapLimit);
+        Assert.Equal(1, world.RedCaps);
+        Assert.Equal(0, world.BlueCaps);
+        Assert.Equal(MatchPhase.Running, world.MatchState.Phase);
+    }
+
+    [Fact]
     public void LoadingArenaMap_EnablesArenaModeAndStartsLockedPointTimer()
     {
         var world = CreateWorld();
@@ -702,6 +722,8 @@ public sealed class SimulationWorldTests
 
         Assert.True(world.TryLoadLevel("arena_montane"));
         world.DespawnEnemyDummy();
+        Assert.True(world.TrySetNetworkPlayerTeam(SimulationWorld.LocalPlayerSlot, PlayerTeam.Red));
+        Assert.True(world.TryApplyNetworkPlayerClassSelection(SimulationWorld.LocalPlayerSlot, PlayerClass.Scout));
         Assert.True(world.TryPrepareNetworkPlayerJoin(redExtraSlot));
         Assert.True(world.TrySetNetworkPlayerTeam(redExtraSlot, PlayerTeam.Red));
         Assert.True(world.TryApplyNetworkPlayerClassSelection(redExtraSlot, PlayerClass.Scout));
@@ -872,6 +894,29 @@ public sealed class SimulationWorldTests
         world.AdvanceOneTick();
 
         Assert.Empty(world.Rockets);
+    }
+
+    [Fact]
+    public void FullMapChange_ResetsPlayableSlotsToAwaitingJoin()
+    {
+        var world = CreateWorld();
+        const byte extraSlot = 3;
+
+        Assert.True(world.TryPrepareNetworkPlayerJoin(extraSlot));
+        Assert.True(world.TrySetNetworkPlayerTeam(extraSlot, PlayerTeam.Red));
+        Assert.True(world.TryApplyNetworkPlayerClassSelection(extraSlot, PlayerClass.Scout));
+        Assert.True(world.TryGetNetworkPlayer(extraSlot, out var extraPlayer));
+        Assert.False(world.IsNetworkPlayerAwaitingJoin(SimulationWorld.LocalPlayerSlot));
+        Assert.False(world.IsNetworkPlayerAwaitingJoin(extraSlot));
+        Assert.True(world.LocalPlayer.IsAlive);
+        Assert.True(extraPlayer.IsAlive);
+
+        Assert.True(world.TryLoadLevel("Waterway", mapAreaIndex: 1, preservePlayerStats: false));
+
+        Assert.True(world.IsNetworkPlayerAwaitingJoin(SimulationWorld.LocalPlayerSlot));
+        Assert.True(world.IsNetworkPlayerAwaitingJoin(extraSlot));
+        Assert.False(world.LocalPlayer.IsAlive);
+        Assert.False(extraPlayer.IsAlive);
     }
 
     private static SimulationWorld CreateWorld()
