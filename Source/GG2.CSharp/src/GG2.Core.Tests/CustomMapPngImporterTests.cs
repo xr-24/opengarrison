@@ -94,7 +94,7 @@ public sealed class CustomMapPngImporterTests
     }
 
     [Fact]
-    public void Import_DeduplicatesAreaBoundariesFromLegacyNextAndPreviousMarkers()
+    public void Import_PreservesDirectionalAreaMarkersAndBuildsBoundariesFromNextMarkers()
     {
         var mapPath = CreateCustomMapPng(
             """
@@ -115,6 +115,9 @@ public sealed class CustomMapPngImporterTests
             300
             PreviousAreaO
             0
+            100
+            PreviousAreaO
+            0
             300
             NextAreaO
             0
@@ -126,6 +129,30 @@ public sealed class CustomMapPngImporterTests
         Assert.NotNull(imported);
 
         Assert.Equal([300f, 700f], imported!.Room.AreaBoundaries.ToArray());
+        Assert.Collection(
+            imported.Room.AreaTransitionMarkers,
+            marker =>
+            {
+                Assert.Equal(AreaTransitionDirection.Next, marker.Direction);
+                Assert.Equal(300f, marker.Y);
+                Assert.Equal("NextAreaO", marker.SourceName);
+            },
+            marker =>
+            {
+                Assert.Equal(AreaTransitionDirection.Previous, marker.Direction);
+                Assert.Equal(100f, marker.Y);
+                Assert.Equal("PreviousAreaO", marker.SourceName);
+            },
+            marker =>
+            {
+                Assert.Equal(AreaTransitionDirection.Previous, marker.Direction);
+                Assert.Equal(300f, marker.Y);
+            },
+            marker =>
+            {
+                Assert.Equal(AreaTransitionDirection.Next, marker.Direction);
+                Assert.Equal(700f, marker.Y);
+            });
     }
 
     private static string CreateCustomMapPng(string levelData)

@@ -100,6 +100,18 @@ public sealed partial class PlayerEntity
             return false;
         }
 
+        if (IsSpyCloaked)
+        {
+            if (SpyCloakAlpha > SpyCloakToggleThreshold + 0.0001f)
+            {
+                return false;
+            }
+        }
+        else if (SpyCloakAlpha < 0.9999f)
+        {
+            return false;
+        }
+
         IsSpyCloaked = !IsSpyCloaked;
         if (!IsSpyCloaked)
         {
@@ -253,11 +265,16 @@ public sealed partial class PlayerEntity
     {
         if (ClassId != PlayerClass.Spy)
         {
+            SpyCloakAlpha = 1f;
             IsSpyVisibleToEnemies = false;
             SpyBackstabWindupTicksRemaining = 0;
             SpyBackstabRecoveryTicksRemaining = 0;
             return;
         }
+
+        SpyCloakAlpha = IsSpyCloaked
+            ? float.Max(0f, SpyCloakAlpha - SpyCloakFadePerTick)
+            : float.Min(1f, SpyCloakAlpha + SpyCloakFadePerTick);
 
         if (SpyBackstabWindupTicksRemaining > 0)
         {
@@ -273,11 +290,10 @@ public sealed partial class PlayerEntity
         if (SpyBackstabRecoveryTicksRemaining > 0)
         {
             SpyBackstabRecoveryTicksRemaining -= 1;
-            if (SpyBackstabRecoveryTicksRemaining == 0 && IsSpyCloaked)
-            {
-                IsSpyVisibleToEnemies = false;
-            }
         }
+
+        IsSpyVisibleToEnemies = IsSpyCloaked
+            && (SpyCloakAlpha > 0f || SpyBackstabWindupTicksRemaining > 0 || SpyBackstabRecoveryTicksRemaining > 0);
     }
 
     private void AdvancePyroAirblastState()

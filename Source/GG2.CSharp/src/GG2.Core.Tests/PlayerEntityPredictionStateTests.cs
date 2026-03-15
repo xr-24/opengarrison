@@ -50,6 +50,7 @@ public sealed class PlayerEntityPredictionStateTests
             QuoteBladesOut: 1,
             PyroAirblastCooldownTicks: 6,
             IsSpyCloaked: true,
+            SpyCloakAlpha: 0.4f,
             SpyBackstabWindupTicksRemaining: 8,
             SpyBackstabRecoveryTicksRemaining: 3,
             SpyBackstabDirectionDegrees: 215f,

@@ -492,6 +492,7 @@ public sealed class SimulationWorldTests
             player.IsGrounded,
             player.IsCarryingIntel,
             player.IsSpyCloaked,
+            player.SpyCloakAlpha,
             player.IsUbered,
             player.IsHeavyEating,
             player.HeavyEatTicksRemaining,

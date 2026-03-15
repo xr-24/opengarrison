@@ -10,4 +10,7 @@ public sealed record GameMakerRoomMetadata(
     IReadOnlyList<SpawnPoint> BlueSpawns,
     IReadOnlyList<IntelBaseMarker> IntelBases,
     IReadOnlyList<RoomObjectMarker> RoomObjects,
-    IReadOnlyList<float> AreaBoundaries);
+    IReadOnlyList<float> AreaBoundaries)
+{
+    public IReadOnlyList<AreaTransitionMarker> AreaTransitionMarkers { get; init; } = Array.Empty<AreaTransitionMarker>();
+}

@@ -8,6 +8,7 @@ namespace GG2.Server.Tests;
 
 public sealed class ServerLaunchOptionsTests : IDisposable
 {
+    private static readonly DateTimeOffset FixedNow = new(2026, 3, 15, 10, 30, 0, TimeSpan.Zero);
     private readonly string _tempDirectory = Path.Combine(Path.GetTempPath(), "gg2-server-launch-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
@@ -18,7 +19,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
         var preferences = CreatePreferences();
         preferences.Save(configPath);
 
-        var options = ServerLaunchOptions.Load(["--config", configPath], ServerSettings.Load);
+        var options = ServerLaunchOptions.Load(["--config", configPath], ServerSettings.Load, FixedNow);
 
         Assert.Equal(configPath, options.ResolvedConfigPath);
         Assert.Equal(9001, options.Port);
@@ -28,6 +29,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
         Assert.Equal("lobby.example", options.LobbyHost);
         Assert.Equal(32000, options.LobbyPort);
         Assert.Equal("cfg-rotation.txt", options.MapRotationFile);
+        Assert.Equal(PersistentServerEventLog.GetDefaultPath(FixedNow), options.EventLogPath);
         Assert.Null(options.RequestedMap);
         Assert.Equal(60, options.TickRate);
         Assert.False(options.AutoBalanceEnabled);
@@ -47,12 +49,14 @@ public sealed class ServerLaunchOptionsTests : IDisposable
         var configPath = Path.Combine(_tempDirectory, "gg2.ini");
         CreatePreferences().Save(configPath);
 
+        var eventLogPath = Path.Combine(_tempDirectory, "custom-events.log");
         var options = ServerLaunchOptions.Load(
         [
             "--config", configPath,
             "--port", "7777",
             "--map", "ctf_orange",
             "--map-rotation", "override-rotation.txt",
+            "--event-log", eventLogPath,
             "--name", "CLI Server",
             "--password", "cli-password",
             "--slots", "12",
@@ -64,13 +68,14 @@ public sealed class ServerLaunchOptionsTests : IDisposable
             "--time-limit", "18",
             "--cap-limit", "6",
             "--respawn-seconds", "4",
-        ], ServerSettings.Load);
+        ], ServerSettings.Load, FixedNow);
 
         Assert.Equal(7777, options.Port);
         Assert.Equal("CLI Server", options.ServerName);
         Assert.Equal("cli-password", options.ServerPassword);
         Assert.Equal("ctf_orange", options.RequestedMap);
         Assert.Equal("override-rotation.txt", options.MapRotationFile);
+        Assert.Equal(Path.GetFullPath(eventLogPath), options.EventLogPath);
         Assert.Equal(90, options.TickRate);
         Assert.True(options.UseLobbyServer);
         Assert.Equal("cli.example", options.LobbyHost);

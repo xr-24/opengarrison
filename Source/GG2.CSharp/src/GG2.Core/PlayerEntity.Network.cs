@@ -43,6 +43,7 @@ public sealed partial class PlayerEntity
         int QuoteBladesOut,
         int PyroAirblastCooldownTicks,
         bool IsSpyCloaked,
+        float SpyCloakAlpha,
         int SpyBackstabWindupTicksRemaining,
         int SpyBackstabRecoveryTicksRemaining,
         float SpyBackstabDirectionDegrees,
@@ -100,6 +101,7 @@ public sealed partial class PlayerEntity
             QuoteBladesOut,
             PyroAirblastCooldownTicks,
             IsSpyCloaked,
+            SpyCloakAlpha,
             SpyBackstabWindupTicksRemaining,
             SpyBackstabRecoveryTicksRemaining,
             SpyBackstabDirectionDegrees,
@@ -157,6 +159,7 @@ public sealed partial class PlayerEntity
         QuoteBladesOut = state.QuoteBladesOut;
         PyroAirblastCooldownTicks = state.PyroAirblastCooldownTicks;
         IsSpyCloaked = state.IsSpyCloaked;
+        SpyCloakAlpha = float.Clamp(state.SpyCloakAlpha, 0f, 1f);
         SpyBackstabWindupTicksRemaining = state.SpyBackstabWindupTicksRemaining;
         SpyBackstabRecoveryTicksRemaining = state.SpyBackstabRecoveryTicksRemaining;
         SpyBackstabDirectionDegrees = state.SpyBackstabDirectionDegrees;
@@ -190,6 +193,7 @@ public sealed partial class PlayerEntity
         bool isGrounded,
         bool isCarryingIntel,
         bool isSpyCloaked,
+        float spyCloakAlpha,
         bool isUbered,
         bool isHeavyEating,
         int heavyEatTicksRemaining,
@@ -220,6 +224,8 @@ public sealed partial class PlayerEntity
         Metal = float.Clamp(metal, 0f, MaxMetal);
         IsCarryingIntel = isCarryingIntel;
         IsSpyCloaked = isSpyCloaked;
+        SpyCloakAlpha = float.Clamp(spyCloakAlpha, 0f, 1f);
+        IsSpyVisibleToEnemies = IsSpyCloaked && SpyCloakAlpha > 0f;
         UberTicksRemaining = isUbered ? DefaultUberRefreshTicks : 0;
         IsHeavyEating = isHeavyEating;
         HeavyEatTicksRemaining = Math.Max(0, heavyEatTicksRemaining);

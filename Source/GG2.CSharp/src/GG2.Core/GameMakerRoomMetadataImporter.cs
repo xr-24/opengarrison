@@ -52,7 +52,8 @@ public static class GameMakerRoomMetadataImporter
             .Concat(blueIntelBases)
             .ToArray();
         var roomObjects = ReadRoomObjects(instances);
-        var areaBoundaries = ReadAreaBoundaries(instances);
+        var areaTransitionMarkers = ReadAreaTransitionMarkers(instances);
+        var areaBoundaries = AreaTransitionMetadata.BuildAreaBoundaries(areaTransitionMarkers);
         var primaryBackgroundAssetName = ReadPrimaryBackgroundAssetName(room);
 
         var roomName = Path.GetFileNameWithoutExtension(roomFilePath);
@@ -64,7 +65,10 @@ public static class GameMakerRoomMetadataImporter
             BlueSpawns: blueSpawns,
             IntelBases: intelBases,
             RoomObjects: roomObjects,
-            AreaBoundaries: areaBoundaries);
+            AreaBoundaries: areaBoundaries)
+        {
+            AreaTransitionMarkers = areaTransitionMarkers,
+        };
     }
 
     private static SpawnPoint[] ReadSpawnPoints(XElement[] instances, string objectName)
@@ -101,15 +105,39 @@ public static class GameMakerRoomMetadataImporter
             .ToArray();
     }
 
-    private static float[] ReadAreaBoundaries(XElement[] instances)
+    private static AreaTransitionMarker[] ReadAreaTransitionMarkers(XElement[] instances)
     {
-        return instances
-            .Where(instance => (string?)instance.Element("object") == "NextAreaO")
-            .Select(instance => instance.Element("position"))
-            .Where(position => position is not null)
-            .Select(position => (float?)position!.Attribute("y") ?? 0f)
-            .OrderBy(y => y)
-            .ToArray();
+        var markers = new List<AreaTransitionMarker>();
+        foreach (var instance in instances)
+        {
+            var objectName = (string?)instance.Element("object");
+            var position = instance.Element("position");
+            if (position is null)
+            {
+                continue;
+            }
+
+            var marker = objectName switch
+            {
+                "NextAreaO" => new AreaTransitionMarker(
+                    (float?)position.Attribute("x") ?? 0f,
+                    (float?)position.Attribute("y") ?? 0f,
+                    AreaTransitionDirection.Next,
+                    objectName),
+                "PreviousAreaO" => new AreaTransitionMarker(
+                    (float?)position.Attribute("x") ?? 0f,
+                    (float?)position.Attribute("y") ?? 0f,
+                    AreaTransitionDirection.Previous,
+                    objectName),
+                _ => (AreaTransitionMarker?)null,
+            };
+            if (marker.HasValue)
+            {
+                markers.Add(marker.Value);
+            }
+        }
+
+        return markers.ToArray();
     }
 
     private static string ReadPrimaryBackgroundAssetName(XElement room)

@@ -221,6 +221,7 @@ public partial class Game1
             return;
         }
 
+        var visibilityAlpha = GetPlayerVisibilityAlpha(_world.LocalPlayer);
         var playerFallbackColor = _world.LocalPlayer.IsCarryingIntel
             ? new Color(255, 180, 80)
             : Color.OrangeRed;
@@ -229,12 +230,12 @@ public partial class Game1
         {
             if (!TryDrawPlayerSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint))
             {
-                _spriteBatch.Draw(_pixel, playerRectangle, playerFallbackColor);
+                _spriteBatch.Draw(_pixel, playerRectangle, playerFallbackColor * visibilityAlpha);
             }
 
             if (!GetPlayerIsHeavyEating(_world.LocalPlayer) && !_world.LocalPlayer.IsTaunting)
             {
-                TryDrawWeaponSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint);
+                TryDrawWeaponSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint, visibilityAlpha);
             }
         }
 

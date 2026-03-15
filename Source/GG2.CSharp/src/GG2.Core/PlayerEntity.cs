@@ -24,6 +24,12 @@ public sealed partial class PlayerEntity : SimulationEntity
     public const int MedicNeedleFireCooldownTicks = 3;
     public const int SpyBackstabWindupTicksDefault = 32;
     public const int SpyBackstabRecoveryTicksDefault = 18;
+    public const float SpyCloakFadePerTick = 0.05f;
+    public const float SpyCloakToggleThreshold = 0.5f;
+    public const float SpyMinAllyCloakAlpha = 0.5f;
+    public const float SpyDamageRevealAlpha = 0.1f;
+    public const float SpyMineRevealAlpha = 0.2f;
+    public const float SpySniperRevealAlpha = 0.3f;
     public const int QuoteBubbleLimit = 25;
     public const int QuoteBladeEnergyCost = 15;
     public const int QuoteBladeLifetimeTicks = 15;
@@ -143,6 +149,8 @@ public sealed partial class PlayerEntity : SimulationEntity
 
     public bool IsSpyCloaked { get; private set; }
 
+    public float SpyCloakAlpha { get; private set; } = 1f;
+
     public bool IsSpyBackstabReady => SpyBackstabWindupTicksRemaining <= 0 && SpyBackstabRecoveryTicksRemaining <= 0;
 
     public bool IsSpyBackstabAnimating => SpyBackstabWindupTicksRemaining > 0 || SpyBackstabRecoveryTicksRemaining > 0;
@@ -155,7 +163,7 @@ public sealed partial class PlayerEntity : SimulationEntity
 
     public bool IsSpyVisibleToEnemies { get; private set; }
 
-    public bool IsSpyVisibleToAllies => !IsSpyCloaked || IsSpyBackstabReady || IsSpyVisibleToEnemies;
+    public bool IsSpyVisibleToAllies => !IsSpyCloaked || IsSpyBackstabReady || SpyCloakAlpha > 0f;
 
     public int Kills { get; private set; }
 
@@ -233,6 +241,7 @@ public sealed partial class PlayerEntity : SimulationEntity
         PyroAirblastCooldownTicks = 0;
         IsInSpawnRoom = false;
         IsSpyCloaked = false;
+        SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
@@ -267,6 +276,7 @@ public sealed partial class PlayerEntity : SimulationEntity
         QuoteBladesOut = 0;
         PyroAirblastCooldownTicks = 0;
         IsSpyCloaked = false;
+        SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
@@ -302,6 +312,7 @@ public sealed partial class PlayerEntity : SimulationEntity
         PyroAirblastCooldownTicks = 0;
         IsInSpawnRoom = false;
         IsSpyCloaked = false;
+        SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;

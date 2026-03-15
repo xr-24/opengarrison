@@ -16,7 +16,7 @@ public sealed partial class SimulationWorld
 
         if (directHitPlayer is not null && !ReferenceEquals(directHitPlayer, FindPlayerById(rocket.OwnerId)))
         {
-            if (directHitPlayer.ApplyDamage(RocketProjectileEntity.DirectHitDamage))
+            if (directHitPlayer.ApplyDamage(RocketProjectileEntity.DirectHitDamage, PlayerEntity.SpyDamageRevealAlpha))
             {
                 KillPlayer(directHitPlayer, gibbed: true, killer: FindPlayerById(rocket.OwnerId), weaponSpriteName: "RocketlauncherS");
             }
@@ -67,7 +67,7 @@ public sealed partial class SimulationWorld
             if (player.Team != rocket.Team || player.Id == rocket.OwnerId)
             {
                 RegisterBloodEffect(player.X, player.Y, PointDirectionDegrees(rocket.X, rocket.Y, player.X, player.Y) - 180f, 3);
-                if (player.ApplyContinuousDamage(damage))
+                if (player.ApplyContinuousDamage(damage, PlayerEntity.SpyDamageRevealAlpha))
                 {
                     KillPlayer(player, gibbed: true, killer: FindPlayerById(rocket.OwnerId), weaponSpriteName: "RocketlauncherS");
                 }
@@ -203,7 +203,7 @@ public sealed partial class SimulationWorld
             if (player.Team != mine.Team || player.Id == mine.OwnerId)
             {
                 RegisterBloodEffect(player.X, player.Y, PointDirectionDegrees(mine.X, mine.Y, player.X, player.Y) - 180f, 3);
-                if (player.ApplyContinuousDamage(mine.ExplosionDamage * factor))
+                if (player.ApplyContinuousDamage(mine.ExplosionDamage * factor, PlayerEntity.SpyMineRevealAlpha))
                 {
                     KillPlayer(player, gibbed: true, killer: FindPlayerById(mine.OwnerId), weaponSpriteName: "MinegunS");
                 }

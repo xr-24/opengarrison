@@ -130,11 +130,46 @@ public partial class Game1
             : player.IsSpyCloaked;
     }
 
+    private float GetPlayerSpyCloakAlpha(PlayerEntity player)
+    {
+        return IsUsingPredictedLocalState(player)
+            ? _predictedLocalActionState.SpyCloakAlpha
+            : player.SpyCloakAlpha;
+    }
+
     private bool GetPlayerIsSpyVisibleToEnemies(PlayerEntity player)
     {
         return IsUsingPredictedLocalState(player)
             ? _predictedLocalActionState.IsSpyVisibleToEnemies
             : player.IsSpyVisibleToEnemies;
+    }
+
+    private float GetPlayerVisibilityAlpha(PlayerEntity player)
+    {
+        if (!player.IsAlive || !GetPlayerIsSpyCloaked(player))
+        {
+            return 1f;
+        }
+
+        if (_networkClient.IsSpectator)
+        {
+            return 1f;
+        }
+
+        var cloakAlpha = Math.Clamp(GetPlayerSpyCloakAlpha(player), 0f, 1f);
+        if (ReferenceEquals(player, _world.LocalPlayer))
+        {
+            return cloakAlpha;
+        }
+
+        if (player.Team == _world.LocalPlayer.Team)
+        {
+            return GetPlayerIsSpyBackstabAnimating(player)
+                ? cloakAlpha
+                : Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha);
+        }
+
+        return cloakAlpha;
     }
 
     private bool GetPlayerIsSpyBackstabAnimating(PlayerEntity player)

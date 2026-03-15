@@ -24,11 +24,7 @@ public partial class Game1
         }
 
         var frameIndex = Math.Clamp(player.ChatBubbleFrameIndex, 0, sprite.Frames.Count - 1);
-        var alpha = Math.Clamp(player.ChatBubbleAlpha, 0f, 1f);
-        if (player.ClassId == PlayerClass.Spy && GetPlayerIsSpyCloaked(player) && !GetPlayerIsSpyVisibleToEnemies(player))
-        {
-            alpha *= 0f;
-        }
+        var alpha = Math.Clamp(player.ChatBubbleAlpha, 0f, 1f) * GetPlayerVisibilityAlpha(player);
 
         if (alpha <= 0f)
         {
@@ -49,6 +45,11 @@ public partial class Game1
 
     private void DrawHealthBar(PlayerEntity player, Vector2 cameraPosition, Color fillColor, Color backColor)
     {
+        if (GetPlayerVisibilityAlpha(player) <= 0f)
+        {
+            return;
+        }
+
         var renderPosition = GetRenderPosition(player, allowInterpolation: !ReferenceEquals(player, _world.LocalPlayer));
         var barWidth = (int)player.Width;
         var backRectangle = new Rectangle(

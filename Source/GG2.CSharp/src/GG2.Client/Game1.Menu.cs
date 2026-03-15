@@ -13,6 +13,10 @@ public partial class Game1
         StopIngameMusic();
 
         UpdateLobbyBrowserResponses();
+        if (UpdateDevMessagePopup(keyboard, mouse))
+        {
+            return;
+        }
 
         if (_hostSetupOpen)
         {

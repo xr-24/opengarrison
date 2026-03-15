@@ -197,6 +197,7 @@ public sealed record SnapshotPlayerState(
     bool IsGrounded,
     bool IsCarryingIntel,
     bool IsSpyCloaked,
+    float SpyCloakAlpha,
     bool IsUbered,
     bool IsHeavyEating,
     int HeavyEatTicksRemaining,

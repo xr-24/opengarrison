@@ -116,6 +116,7 @@ public partial class Game1
 
     private void AdvanceMenuClientTicks(int ticks)
     {
+        UpdateDevMessageState();
         for (var tick = 0; tick < ticks; tick += 1)
         {
             UpdatePendingHostedConnect();

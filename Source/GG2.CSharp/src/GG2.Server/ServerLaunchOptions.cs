@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using GG2.Core;
 
 sealed class ServerLaunchOptions
@@ -20,6 +21,7 @@ sealed class ServerLaunchOptions
     public int LobbyPort { get; private init; } = DefaultLobbyPort;
     public string? RequestedMap { get; private init; }
     public string? MapRotationFile { get; private init; }
+    public string EventLogPath { get; private init; } = string.Empty;
     public IReadOnlyList<string> StockMapRotation { get; private init; } = Array.Empty<string>();
     public int TickRate { get; private init; } = SimulationConfig.DefaultTicksPerSecond;
     public int MaxPlayableClients { get; private init; }
@@ -32,10 +34,15 @@ sealed class ServerLaunchOptions
 
     public static ServerLaunchOptions Load(string[] args)
     {
-        return Load(args, ServerSettings.Load);
+        return Load(args, ServerSettings.Load, DateTimeOffset.Now);
     }
 
     internal static ServerLaunchOptions Load(string[] args, Func<string?, ServerSettings> loadSettings)
+    {
+        return Load(args, loadSettings, DateTimeOffset.Now);
+    }
+
+    internal static ServerLaunchOptions Load(string[] args, Func<string?, ServerSettings> loadSettings, DateTimeOffset now)
     {
         string? configPath = null;
         for (var index = 0; index < args.Length; index += 1)
@@ -65,6 +72,7 @@ sealed class ServerLaunchOptions
         var lobbyPort = settings.LobbyPort > 0 ? settings.LobbyPort : DefaultLobbyPort;
         string? requestedMap = string.IsNullOrWhiteSpace(settings.RequestedMap) ? null : settings.RequestedMap;
         string? mapRotationFile = string.IsNullOrWhiteSpace(settings.MapRotationFile) ? null : settings.MapRotationFile;
+        var eventLogPath = PersistentServerEventLog.GetDefaultPath(now);
         var stockMapRotation = Gg2StockMapCatalog.GetOrderedIncludedMapLevelNames(settings.HostDefaults.StockMapRotation);
         var tickRate = SimulationConfig.NormalizeTicksPerSecond(settings.TickRate);
         int? timeLimitMinutesOverride = settings.TimeLimitMinutes > 0 ? Math.Clamp(settings.TimeLimitMinutes, 1, 255) : null;
@@ -138,6 +146,15 @@ sealed class ServerLaunchOptions
             if (string.Equals(arg, "--map-rotation", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
             {
                 mapRotationFile = args[index + 1];
+                index += 1;
+                continue;
+            }
+
+            if ((string.Equals(arg, "--event-log", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(arg, "--event-log-file", StringComparison.OrdinalIgnoreCase))
+                && index + 1 < args.Length)
+            {
+                eventLogPath = Path.GetFullPath(args[index + 1]);
                 index += 1;
                 continue;
             }
@@ -247,6 +264,7 @@ sealed class ServerLaunchOptions
             LobbyPort = lobbyPort,
             RequestedMap = requestedMap,
             MapRotationFile = mapRotationFile,
+            EventLogPath = eventLogPath,
             StockMapRotation = stockMapRotation,
             TickRate = tickRate,
             MaxPlayableClients = maxPlayableClients,
