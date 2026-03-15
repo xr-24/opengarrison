@@ -23,6 +23,10 @@ sealed class ServerSessionManager
     private readonly Action<IPEndPoint> _clearPasswordFailures;
     private readonly Action<IPEndPoint, IProtocolMessage> _sendMessage;
     private readonly Action<string> _log;
+    private readonly Action<ClientSession, string> _clientRemoved;
+    private readonly Action<ClientSession> _passwordAccepted;
+    private readonly Action<ClientSession, PlayerTeam> _playerTeamChanged;
+    private readonly Action<ClientSession, PlayerClass> _playerClassChanged;
 
     public ServerSessionManager(
         SimulationWorld world,
@@ -40,7 +44,11 @@ sealed class ServerSessionManager
         Action<IPEndPoint> recordPasswordFailure,
         Action<IPEndPoint> clearPasswordFailures,
         Action<IPEndPoint, IProtocolMessage> sendMessage,
-        Action<string> log)
+        Action<string> log,
+        Action<ClientSession, string>? clientRemoved = null,
+        Action<ClientSession>? passwordAccepted = null,
+        Action<ClientSession, PlayerTeam>? playerTeamChanged = null,
+        Action<ClientSession, PlayerClass>? playerClassChanged = null)
     {
         _world = world;
         _clientsBySlot = clientsBySlot;
@@ -58,6 +66,10 @@ sealed class ServerSessionManager
         _clearPasswordFailures = clearPasswordFailures;
         _sendMessage = sendMessage;
         _log = log;
+        _clientRemoved = clientRemoved ?? ((_, _) => { });
+        _passwordAccepted = passwordAccepted ?? (_ => { });
+        _playerTeamChanged = playerTeamChanged ?? ((_, _) => { });
+        _playerClassChanged = playerClassChanged ?? ((_, _) => { });
     }
 
     public void ApplyClientName(byte slot, string name)
@@ -138,6 +150,7 @@ sealed class ServerSessionManager
             client.IsAuthorized = true;
             _clearPasswordFailures(client.EndPoint);
             _sendMessage(client.EndPoint, new PasswordResultMessage(true, string.Empty));
+            _passwordAccepted(client);
             return;
         }
 
@@ -154,6 +167,7 @@ sealed class ServerSessionManager
             _clearPasswordFailures(client.EndPoint);
             _sendMessage(client.EndPoint, new PasswordResultMessage(true, string.Empty));
             _log($"[server] client authorized slot={client.Slot} endpoint={client.EndPoint}");
+            _passwordAccepted(client);
             return;
         }
 
@@ -170,10 +184,29 @@ sealed class ServerSessionManager
         }
 
         _log($"[server] client removed slot={slot} endpoint={removedClient.EndPoint} reason={reason}");
+        _clientRemoved(removedClient, reason);
         if (SimulationWorld.IsPlayableNetworkPlayerSlot(slot))
         {
             _world.TryReleaseNetworkPlayerSlot(slot);
         }
+    }
+
+    public bool TryMoveClientToSpectator(byte slot)
+    {
+        return _clientsBySlot.TryGetValue(slot, out var client)
+            && ApplyRequestedSpectate(client);
+    }
+
+    public bool TrySetClientTeam(byte slot, PlayerTeam team)
+    {
+        return _clientsBySlot.TryGetValue(slot, out var client)
+            && ApplyRequestedTeam(client, (byte)team);
+    }
+
+    public bool TrySetClientClass(byte slot, PlayerClass playerClass)
+    {
+        return _clientsBySlot.ContainsKey(slot)
+            && ApplyRequestedClass(slot, (byte)playerClass);
     }
 
     public void PruneTimedOutClients()
@@ -244,7 +277,17 @@ sealed class ServerSessionManager
         }
 
         var team = (PlayerTeam)requestedTeam;
-        return _world.TrySetNetworkPlayerTeam(slot, team);
+        if (!_world.TrySetNetworkPlayerTeam(slot, team))
+        {
+            return false;
+        }
+
+        if (_clientsBySlot.TryGetValue(slot, out var client))
+        {
+            _playerTeamChanged(client, team);
+        }
+
+        return true;
     }
 
     private bool ApplyRequestedClass(byte slot, byte requestedClass)
@@ -255,7 +298,17 @@ sealed class ServerSessionManager
         }
 
         var playerClass = (PlayerClass)requestedClass;
-        return _world.TryApplyNetworkPlayerClassSelection(slot, playerClass);
+        if (!_world.TryApplyNetworkPlayerClassSelection(slot, playerClass))
+        {
+            return false;
+        }
+
+        if (_clientsBySlot.TryGetValue(slot, out var client))
+        {
+            _playerClassChanged(client, playerClass);
+        }
+
+        return true;
     }
 
     private bool TryMoveClientToSlot(ClientSession client, byte newSlot)

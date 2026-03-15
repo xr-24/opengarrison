@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GG2.Server.Plugins.Abstractions\GG2.Server.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\\GG2.Server\\GG2.Server.csproj" />
   </ItemGroup>
 

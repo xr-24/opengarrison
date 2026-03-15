@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -10,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GG2.Core;
 using GG2.Protocol;
+using GG2.Server.Plugins;
 using static ServerHelpers;
 
 sealed class GameServer
@@ -66,6 +68,8 @@ sealed class GameServer
     private TimeSpan _previous;
     private Dictionary<byte, ClientSession> _clientsBySlot = null!;
     private ServerSessionManager _sessionManager = null!;
+    private GG2.Server.PluginCommandRegistry _pluginCommandRegistry = null!;
+    private GG2.Server.PluginHost? _pluginHost;
     private AutoBalancer _autoBalancer = null!;
     private SnapshotBroadcaster _snapshotBroadcaster = null!;
     private MapRotationManager _mapRotationManager = null!;
@@ -186,7 +190,11 @@ sealed class GameServer
             RecordPasswordFailure,
             ClearPasswordFailures,
             SendMessage,
-            Console.WriteLine);
+            Console.WriteLine,
+            OnClientRemoved,
+            OnPasswordAccepted,
+            OnPlayerTeamChanged,
+            OnPlayerClassChanged);
         _autoBalancer = new AutoBalancer(
             _world,
             _config,
@@ -202,6 +210,9 @@ sealed class GameServer
             _clientsBySlot,
             _transientEventReplayTicks,
             SendSnapshotPayload);
+        InitializePluginRuntime();
+        _pluginHost?.LoadPlugins();
+        _pluginHost?.NotifyServerStarting();
 
         Console.WriteLine($"GG2.Server booting at {_config.TicksPerSecond} ticks/sec.");
         Console.WriteLine($"Protocol version: {ProtocolVersion.Current}");
@@ -243,6 +254,7 @@ sealed class GameServer
             Console.WriteLine(line);
         }
         Console.WriteLine("Waiting for a UDP hello packet. Pass a different port as the first CLI argument to override 8190.");
+        _pluginHost?.NotifyServerStarted();
 
         try
         {
@@ -266,8 +278,9 @@ sealed class GameServer
                     () =>
                     {
                         _autoBalancer.Tick(now, 1, _autoBalanceEnabled);
-                        if (_mapRotationManager.TryApplyPendingMapChange())
+                        if (_mapRotationManager.TryApplyPendingMapChange(out var transition))
                         {
+                            NotifyMapTransition(transition);
                             _snapshotBroadcaster.ResetTransientEvents();
                         }
                     },
@@ -289,7 +302,10 @@ sealed class GameServer
         }
         finally
         {
+            _pluginHost?.NotifyServerStopping();
             NotifyClientsOfShutdown();
+            _pluginHost?.NotifyServerStopped();
+            _pluginHost?.ShutdownPlugins();
             Console.WriteLine("[server] shutdown complete.");
         }
     }
@@ -416,6 +432,7 @@ sealed class GameServer
 
     private void HandleHello(HelloMessage hello, IPEndPoint remoteEndPoint)
     {
+        _pluginHost?.NotifyHelloReceived(new HelloReceivedEvent(hello.Name, remoteEndPoint.ToString(), hello.Version));
         if (hello.Version != ProtocolVersion.Current)
         {
             Console.WriteLine($"[server] rejected client {remoteEndPoint} due to protocol mismatch client={hello.Version} server={ProtocolVersion.Current}");
@@ -481,6 +498,12 @@ sealed class GameServer
         _helloRateLimiter.Reset(remoteEndPoint);
         _passwordRateLimiter.Reset(remoteEndPoint);
         Console.WriteLine($"[server] client connected {remoteEndPoint} slot={assignedSlot} name=\"{hello.Name}\" version={hello.Version}");
+        _pluginHost?.NotifyClientConnected(new ClientConnectedEvent(
+            assignedSlot,
+            hello.Name,
+            remoteEndPoint.ToString(),
+            client.IsAuthorized,
+            IsSpectatorSlot(assignedSlot)));
     }
 
     private void ProcessPendingConsoleCommands()
@@ -502,66 +525,18 @@ sealed class GameServer
 
     private List<string> BuildConsoleCommandResponse(string command)
     {
-        var lines = new List<string>();
         var normalized = command.Trim();
         if (normalized.Length == 0)
         {
-            return lines;
+            return [];
         }
 
-        if (string.Equals(normalized, "help", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalized, "?", StringComparison.OrdinalIgnoreCase))
+        if (_pluginCommandRegistry.TryExecute(normalized, CreateCommandContext(), CancellationToken.None, out var responseLines))
         {
-            lines.Add("[server] commands: help, status, players, map, rules, lobby, rotation, shutdown");
-            lines.Add("[server] aliases: info -> status, level -> map, who -> players, maps -> rotation");
-            return lines;
+            return responseLines.ToList();
         }
 
-        if (string.Equals(normalized, "status", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalized, "info", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsoleStatusSummary(lines);
-            AddConsoleRulesSummary(lines);
-            AddConsoleLobbySummary(lines);
-            AddConsoleMapSummary(lines);
-            return lines;
-        }
-
-        if (string.Equals(normalized, "players", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalized, "who", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsolePlayersSummary(lines);
-            return lines;
-        }
-
-        if (string.Equals(normalized, "map", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalized, "level", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsoleMapSummary(lines);
-            return lines;
-        }
-
-        if (string.Equals(normalized, "rules", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsoleRulesSummary(lines);
-            return lines;
-        }
-
-        if (string.Equals(normalized, "lobby", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsoleLobbySummary(lines);
-            return lines;
-        }
-
-        if (string.Equals(normalized, "rotation", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalized, "maps", StringComparison.OrdinalIgnoreCase))
-        {
-            AddConsoleRotationSummary(lines);
-            return lines;
-        }
-
-        lines.Add($"[server] unknown command \"{normalized}\". Type help for commands.");
-        return lines;
+        return [$"[server] unknown command \"{normalized}\". Type help for commands."];
     }
 
     private void AddConsoleStatusSummary(List<string> lines)
@@ -675,6 +650,11 @@ sealed class GameServer
         var team = SimulationWorld.IsPlayableNetworkPlayerSlot(client.Slot) && _world.TryGetNetworkPlayer(client.Slot, out var player)
             ? (byte)player.Team
             : (byte)0;
+        _pluginHost?.NotifyChatReceived(new ChatReceivedEvent(
+            client.Slot,
+            client.Name,
+            sanitized,
+            team == 0 ? null : (PlayerTeam)team));
         var relay = new ChatRelayMessage(team, client.Name, sanitized);
         foreach (var session in _clientsBySlot.Values)
         {
@@ -772,5 +752,202 @@ sealed class GameServer
         catch (NotSupportedException)
         {
         }
+    }
+
+    private void InitializePluginRuntime()
+    {
+        _pluginCommandRegistry = new GG2.Server.PluginCommandRegistry();
+        RegisterBuiltInCommands();
+        _pluginHost = new GG2.Server.PluginHost(
+            _pluginCommandRegistry,
+            new GG2.Server.ServerReadOnlyStateView(() => _serverName, () => _world, () => _clientsBySlot),
+            new GG2.Server.ServerAdminOperations(
+                Console.WriteLine,
+                SendMessage,
+                () => _clientsBySlot,
+                () => _sessionManager,
+                () => _world,
+                () => _mapRotationManager,
+                () => _snapshotBroadcaster,
+                evt => _pluginHost?.NotifyMapChanging(evt),
+                evt => _pluginHost?.NotifyMapChanged(evt)),
+            Path.Combine(RuntimePaths.ApplicationRoot, "Plugins"),
+            Path.Combine(RuntimePaths.ConfigDirectory, "plugins"),
+            Path.Combine(RuntimePaths.ApplicationRoot, "Maps"),
+            Console.WriteLine);
+    }
+
+    private Gg2ServerCommandContext CreateCommandContext()
+    {
+        return new Gg2ServerCommandContext(
+            new GG2.Server.ServerReadOnlyStateView(() => _serverName, () => _world, () => _clientsBySlot),
+            new GG2.Server.ServerAdminOperations(
+                Console.WriteLine,
+                SendMessage,
+                () => _clientsBySlot,
+                () => _sessionManager,
+                () => _world,
+                () => _mapRotationManager,
+                () => _snapshotBroadcaster,
+                evt => _pluginHost?.NotifyMapChanging(evt),
+                evt => _pluginHost?.NotifyMapChanged(evt)));
+    }
+
+    private void RegisterBuiltInCommands()
+    {
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "help",
+            "Show server and plugin commands.",
+            "help",
+            (context, _, _) => Task.FromResult<IReadOnlyList<string>>(BuildHelpLines()),
+            "?");
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "status",
+            "Show overall server status.",
+            "status",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsoleStatusSummary(lines);
+                AddConsoleRulesSummary(lines);
+                AddConsoleLobbySummary(lines);
+                AddConsoleMapSummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            },
+            "info");
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "players",
+            "List connected players.",
+            "players",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsolePlayersSummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            },
+            "who");
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "map",
+            "Show current map details.",
+            "map",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsoleMapSummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            },
+            "level");
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "rules",
+            "Show match rules.",
+            "rules",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsoleRulesSummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "lobby",
+            "Show lobby registration state.",
+            "lobby",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsoleLobbySummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            });
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "rotation",
+            "Show the active map rotation.",
+            "rotation",
+            (context, _, _) =>
+            {
+                var lines = new List<string>();
+                AddConsoleRotationSummary(lines);
+                return Task.FromResult<IReadOnlyList<string>>(lines);
+            },
+            "maps");
+        _pluginCommandRegistry.RegisterBuiltIn(
+            "plugins",
+            "List loaded server plugins.",
+            "plugins",
+            (context, _, _) => Task.FromResult<IReadOnlyList<string>>(BuildPluginLines()));
+    }
+
+    private IReadOnlyList<string> BuildHelpLines()
+    {
+        var lines = new List<string>
+        {
+            "[server] commands:",
+        };
+        foreach (var command in _pluginCommandRegistry.GetPrimaryCommands())
+        {
+            var ownerSuffix = command.IsBuiltIn ? string.Empty : $" [plugin:{command.OwnerId}]";
+            lines.Add($"[server]   {command.Name} - {command.Description} ({command.Usage}){ownerSuffix}");
+        }
+
+        lines.Add("[server] shutdown is handled directly by the host console/admin pipe.");
+        return lines;
+    }
+
+    private IReadOnlyList<string> BuildPluginLines()
+    {
+        var pluginIds = _pluginHost?.LoadedPluginIds ?? [];
+        if (pluginIds.Count == 0)
+        {
+            return ["[server] plugins | count=0"];
+        }
+
+        return
+        [
+            $"[server] plugins | count={pluginIds.Count}",
+            .. pluginIds.Select(pluginId => $"[server] plugin | id={pluginId}")
+        ];
+    }
+
+    private void OnClientRemoved(ClientSession client, string reason)
+    {
+        _pluginHost?.NotifyClientDisconnected(new ClientDisconnectedEvent(
+            client.Slot,
+            client.Name,
+            client.EndPoint.ToString(),
+            reason,
+            client.IsAuthorized));
+    }
+
+    private void OnPasswordAccepted(ClientSession client)
+    {
+        _pluginHost?.NotifyPasswordAccepted(new PasswordAcceptedEvent(
+            client.Slot,
+            client.Name,
+            client.EndPoint.ToString()));
+    }
+
+    private void OnPlayerTeamChanged(ClientSession client, PlayerTeam team)
+    {
+        _pluginHost?.NotifyPlayerTeamChanged(new PlayerTeamChangedEvent(client.Slot, client.Name, team));
+    }
+
+    private void OnPlayerClassChanged(ClientSession client, PlayerClass playerClass)
+    {
+        _pluginHost?.NotifyPlayerClassChanged(new PlayerClassChangedEvent(client.Slot, client.Name, playerClass));
+    }
+
+    private void NotifyMapTransition(MapChangeTransition transition)
+    {
+        _pluginHost?.NotifyMapChanging(new MapChangingEvent(
+            transition.CurrentLevelName,
+            transition.CurrentAreaIndex,
+            transition.CurrentAreaCount,
+            transition.NextLevelName,
+            transition.NextAreaIndex,
+            transition.PreservePlayerStats,
+            transition.WinnerTeam));
+        _pluginHost?.NotifyMapChanged(new MapChangedEvent(
+            _world.Level.Name,
+            _world.Level.MapAreaIndex,
+            _world.Level.MapAreaCount,
+            _world.MatchRules.Mode));
     }
 }

@@ -4,6 +4,15 @@ using System.Linq;
 using GG2.Core;
 using static ServerHelpers;
 
+readonly record struct MapChangeTransition(
+    string CurrentLevelName,
+    int CurrentAreaIndex,
+    int CurrentAreaCount,
+    string NextLevelName,
+    int NextAreaIndex,
+    bool PreservePlayerStats,
+    PlayerTeam? WinnerTeam);
+
 sealed class MapRotationManager
 {
     private readonly SimulationWorld _world;
@@ -28,14 +37,77 @@ sealed class MapRotationManager
         InitializeWorldLevel(requestedMap);
     }
 
-    public bool TryApplyPendingMapChange()
+    public bool TryApplyPendingMapChange(out MapChangeTransition transition)
     {
-        return ServerHelpers.TryApplyPendingMapChange(_world, _mapRotation, ref _mapRotationIndex, _log);
+        transition = default;
+        if (!_world.IsMapChangeReady)
+        {
+            return false;
+        }
+
+        var winner = _world.MatchState.WinnerTeam;
+        var currentLevelName = _world.Level.Name;
+        var currentArea = _world.Level.MapAreaIndex;
+        var totalAreas = _world.Level.MapAreaCount;
+        var preserveStats = false;
+        string nextMap;
+        var nextArea = 1;
+
+        if (winner == PlayerTeam.Red && currentArea < totalAreas)
+        {
+            nextMap = currentLevelName;
+            nextArea = currentArea + 1;
+            preserveStats = true;
+            _log($"[server] advancing to {nextMap} area {nextArea}/{totalAreas} (winner red)");
+        }
+        else if (_mapRotation.Count > 0)
+        {
+            _mapRotationIndex = (_mapRotationIndex + 1) % _mapRotation.Count;
+            nextMap = _mapRotation[_mapRotationIndex];
+            _log($"[server] advancing to next map {nextMap} (winner {(winner.HasValue ? winner.Value.ToString() : "tie")})");
+        }
+        else
+        {
+            nextMap = currentLevelName;
+            _log("[server] map rotation empty; restarting current map.");
+        }
+
+        transition = new MapChangeTransition(
+            currentLevelName,
+            currentArea,
+            totalAreas,
+            nextMap,
+            nextArea,
+            preserveStats,
+            winner);
+
+        if (!_world.ApplyPendingMapChange(nextMap, nextArea, preserveStats))
+        {
+            _log($"[server] failed to apply map change to {nextMap}; restarting round.");
+            transition = default;
+            return false;
+        }
+
+        AlignCurrentMap(_world.Level.Name);
+        _log($"[server] now running {_world.Level.Name} area {_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount}");
+        return true;
     }
 
     public IReadOnlyList<string> MapRotation => _mapRotation;
 
     public int CurrentRotationIndex => _mapRotationIndex;
+
+    public void AlignCurrentMap(string levelName)
+    {
+        var index = FindMapRotationIndex(_mapRotation, levelName);
+        if (index >= 0)
+        {
+            _mapRotationIndex = index;
+            return;
+        }
+
+        _mapRotationIndex = EnsureMapRotationIndex(_mapRotation, levelName, levelName);
+    }
 
     private void InitializeWorldLevel(string? requestedMap)
     {

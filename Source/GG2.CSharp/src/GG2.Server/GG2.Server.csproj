@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\GG2.Server.Plugins.Abstractions\GG2.Server.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\GG2.Core\GG2.Core.csproj" />
     <ProjectReference Include="..\GG2.Protocol\GG2.Protocol.csproj" />
   </ItemGroup>
