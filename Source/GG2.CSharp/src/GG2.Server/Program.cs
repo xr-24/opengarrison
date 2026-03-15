@@ -22,7 +22,7 @@ var pipeName = $"opengarrison-hosted-server-{Environment.ProcessId}";
 
 var config = new SimulationConfig
 {
-    TicksPerSecond = SimulationConfig.DefaultTicksPerSecond,
+    TicksPerSecond = launchOptions.TickRate,
     EnableLocalDummies = false,
 };
 

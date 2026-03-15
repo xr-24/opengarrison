@@ -29,6 +29,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
         Assert.Equal(32000, options.LobbyPort);
         Assert.Equal("cfg-rotation.txt", options.MapRotationFile);
         Assert.Null(options.RequestedMap);
+        Assert.Equal(60, options.TickRate);
         Assert.False(options.AutoBalanceEnabled);
         Assert.Equal(22, options.TimeLimitMinutesOverride);
         Assert.Equal(7, options.CapLimitOverride);
@@ -55,6 +56,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
             "--name", "CLI Server",
             "--password", "cli-password",
             "--slots", "12",
+            "--tickrate", "90",
             "--lobby",
             "--lobby-host", "cli.example",
             "--lobby-port", "33000",
@@ -69,6 +71,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
         Assert.Equal("cli-password", options.ServerPassword);
         Assert.Equal("ctf_orange", options.RequestedMap);
         Assert.Equal("override-rotation.txt", options.MapRotationFile);
+        Assert.Equal(90, options.TickRate);
         Assert.True(options.UseLobbyServer);
         Assert.Equal("cli.example", options.LobbyHost);
         Assert.Equal(33000, options.LobbyPort);
@@ -100,6 +103,7 @@ public sealed class ServerLaunchOptionsTests : IDisposable
                 TimeLimitMinutes = 22,
                 CapLimit = 7,
                 RespawnSeconds = 9,
+                TickRate = 60,
                 LobbyAnnounceEnabled = false,
                 AutoBalanceEnabled = false,
                 DedicatedModeEnabled = true,

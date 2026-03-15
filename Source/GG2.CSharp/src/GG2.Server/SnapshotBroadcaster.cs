@@ -9,11 +9,12 @@ using static ServerHelpers;
 sealed class SnapshotBroadcaster
 {
     private const int TargetSnapshotPayloadBytes = 1200;
+    private readonly record struct SerializedSnapshot(SnapshotMessage Message, byte[] Payload);
 
     private readonly SimulationWorld _world;
     private readonly SimulationConfig _config;
     private readonly Dictionary<byte, ClientSession> _clientsBySlot;
-    private readonly Action<IPEndPoint, IProtocolMessage> _sendMessage;
+    private readonly Action<IPEndPoint, SnapshotMessage, byte[]> _sendSnapshot;
     private readonly ulong _transientEventReplayTicks;
     private readonly List<RetainedSnapshotSoundEvent> _recentSoundEvents = new();
     private readonly List<RetainedSnapshotVisualEvent> _recentVisualEvents = new();
@@ -24,13 +25,13 @@ sealed class SnapshotBroadcaster
         SimulationConfig config,
         Dictionary<byte, ClientSession> clientsBySlot,
         ulong transientEventReplayTicks,
-        Action<IPEndPoint, IProtocolMessage> sendMessage)
+        Action<IPEndPoint, SnapshotMessage, byte[]> sendSnapshot)
     {
         _world = world;
         _config = config;
         _clientsBySlot = clientsBySlot;
         _transientEventReplayTicks = transientEventReplayTicks;
-        _sendMessage = sendMessage;
+        _sendSnapshot = sendSnapshot;
     }
 
     public void ResetTransientEvents()
@@ -87,10 +88,18 @@ sealed class SnapshotBroadcaster
     private void SendSnapshot(ClientSession client, SnapshotVisualEvent[] visualEvents, SnapshotSoundEvent[] soundEvents)
     {
         var fullSnapshot = CaptureFullSnapshot(client, visualEvents, soundEvents);
+        var fullSnapshotPayload = ProtocolCodec.Serialize(fullSnapshot);
+        if (fullSnapshotPayload.Length <= TargetSnapshotPayloadBytes)
+        {
+            _sendSnapshot(client.EndPoint, fullSnapshot, fullSnapshotPayload);
+            client.RememberSnapshotState(fullSnapshot);
+            return;
+        }
+
         var baseline = TryGetBaselineSnapshot(client, fullSnapshot);
         var snapshot = BuildBudgetedSnapshot(client, fullSnapshot, baseline);
-        _sendMessage(client.EndPoint, snapshot);
-        client.RememberSnapshotState(SnapshotDelta.ToFullSnapshot(snapshot, baseline));
+        _sendSnapshot(client.EndPoint, snapshot.Message, snapshot.Payload);
+        client.RememberSnapshotState(SnapshotDelta.ToFullSnapshot(snapshot.Message, baseline));
     }
 
     private SnapshotMessage CaptureFullSnapshot(
@@ -119,7 +128,7 @@ sealed class SnapshotBroadcaster
             _world.RedCaps,
             _world.BlueCaps,
             spectatorCount,
-            client.LastInputSequence,
+            client.LastProcessedInputSequence,
             ToSnapshotIntelState(_world.RedIntel),
             ToSnapshotIntelState(_world.BlueIntel),
             players,
@@ -160,20 +169,22 @@ sealed class SnapshotBroadcaster
             : null;
     }
 
-    private SnapshotMessage BuildBudgetedSnapshot(ClientSession client, SnapshotMessage fullSnapshot, SnapshotMessage? baseline)
+    private SerializedSnapshot BuildBudgetedSnapshot(ClientSession client, SnapshotMessage fullSnapshot, SnapshotMessage? baseline)
     {
         var builder = new SnapshotBuilder(fullSnapshot, baseline?.Frame ?? 0);
         var snapshot = builder.Build();
-        var payloadSize = ProtocolCodec.Serialize(snapshot).Length;
+        var payload = ProtocolCodec.Serialize(snapshot);
+        var payloadSize = payload.Length;
 
         if (payloadSize > TargetSnapshotPayloadBytes)
         {
             TrimAuxiliaryCollections(builder);
             snapshot = builder.Build();
-            payloadSize = ProtocolCodec.Serialize(snapshot).Length;
+            payload = ProtocolCodec.Serialize(snapshot);
+            payloadSize = payload.Length;
             if (payloadSize > TargetSnapshotPayloadBytes)
             {
-                return snapshot;
+                return new SerializedSnapshot(snapshot, payload);
             }
         }
 
@@ -183,17 +194,18 @@ sealed class SnapshotBroadcaster
             var trialBuilder = builder.Clone();
             contribution.Apply(trialBuilder);
             var trialSnapshot = trialBuilder.Build();
-            var trialPayloadSize = ProtocolCodec.Serialize(trialSnapshot).Length;
-            if (trialPayloadSize > TargetSnapshotPayloadBytes)
+            var trialPayload = ProtocolCodec.Serialize(trialSnapshot);
+            if (trialPayload.Length > TargetSnapshotPayloadBytes)
             {
                 continue;
             }
 
             builder = trialBuilder;
             snapshot = trialSnapshot;
+            payload = trialPayload;
         }
 
-        return snapshot;
+        return new SerializedSnapshot(snapshot, payload);
     }
 
     private static void TrimAuxiliaryCollections(SnapshotBuilder builder)

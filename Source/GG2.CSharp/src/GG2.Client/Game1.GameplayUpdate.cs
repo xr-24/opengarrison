@@ -4,6 +4,7 @@ using GG2.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Diagnostics;
 
 namespace GG2.Client;
 
@@ -160,7 +161,13 @@ public partial class Game1
 
     private void UpdateGameplayPresentation(GameTime gameTime, MouseState mouse, int clientTicks)
     {
+        var interpolationStartTimestamp = _networkDiagnosticsEnabled ? Stopwatch.GetTimestamp() : 0L;
         UpdateInterpolatedWorldState();
+        if (_networkDiagnosticsEnabled)
+        {
+            RecordInterpolationDuration(GetDiagnosticsElapsedMilliseconds(interpolationStartTimestamp));
+        }
+
         UpdateLocalSentryNotice();
         UpdateIntelNotice();
         UpdateLocalPredictedRenderPosition();

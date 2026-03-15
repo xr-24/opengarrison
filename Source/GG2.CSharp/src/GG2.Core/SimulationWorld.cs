@@ -44,6 +44,10 @@ public sealed partial class SimulationWorld
     private readonly List<WorldVisualEvent> _pendingVisualEvents = new();
     private readonly List<PlayerEntity> _remoteSnapshotPlayers = new();
     private readonly Dictionary<byte, PlayerEntity> _remoteSnapshotPlayersBySlot = new();
+    private readonly HashSet<int> _snapshotSeenEntityIds = new();
+    private readonly List<int> _snapshotStaleEntityIds = new();
+    private readonly HashSet<byte> _snapshotSeenRemotePlayerSlots = new();
+    private readonly List<byte> _snapshotStaleRemotePlayerSlots = new();
     private readonly Dictionary<byte, PlayerEntity> _additionalNetworkPlayersBySlot = new();
     private readonly HashSet<byte> _enabledAdditionalNetworkPlayerSlots = new();
     private readonly Dictionary<byte, CharacterClassDefinition> _additionalNetworkPlayerClassDefinitions = new();

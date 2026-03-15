@@ -15,6 +15,7 @@ public partial class Game1
     private float _clientUpdateElapsedSeconds;
     private bool _pendingPredictedJumpPress;
     private bool _pendingPredictedSecondaryPress;
+    private uint _latchedJumpPressSequence;
 
     private int ConsumeClientTickCount(GameTime gameTime)
     {
@@ -38,6 +39,7 @@ public partial class Game1
         _networkInputAccumulatorSeconds = 0d;
         _pendingPredictedJumpPress = false;
         _pendingPredictedSecondaryPress = false;
+        _latchedJumpPressSequence = 0;
     }
 
     private void CapturePendingPredictedInputEdges(KeyboardState keyboard, MouseState mouse, PlayerInputSnapshot networkInput)
@@ -72,14 +74,35 @@ public partial class Game1
         while (_networkInputAccumulatorSeconds >= _config.FixedDeltaSeconds)
         {
             _networkInputAccumulatorSeconds -= _config.FixedDeltaSeconds;
-            var sentInputSequence = _networkClient.SendInput(networkInput);
+            var outboundNetworkInput = networkInput;
+            if (_latchedJumpPressSequence != 0 && !outboundNetworkInput.Up)
+            {
+                // Keep jump held in the outbound stream until authority confirms it
+                // processed one matching input, so brief tap timing can't lose the edge.
+                outboundNetworkInput = outboundNetworkInput with { Up = true };
+            }
+
+            var sentInputSequence = _networkClient.SendInput(outboundNetworkInput);
+            if (_pendingPredictedJumpPress && sentInputSequence != 0)
+            {
+                _latchedJumpPressSequence = sentInputSequence;
+            }
+
             RecordPredictedInput(
                 sentInputSequence,
-                networkInput,
+                outboundNetworkInput,
                 _pendingPredictedJumpPress,
                 _pendingPredictedSecondaryPress);
             _pendingPredictedJumpPress = false;
             _pendingPredictedSecondaryPress = false;
+        }
+    }
+
+    private void AcknowledgeLatchedPredictedInputs(uint lastProcessedInputSequence)
+    {
+        if (_latchedJumpPressSequence != 0 && lastProcessedInputSequence >= _latchedJumpPressSequence)
+        {
+            _latchedJumpPressSequence = 0;
         }
     }
 

@@ -133,6 +133,7 @@ sealed class GameServer
     public void Run(CancellationToken cancellationToken)
     {
         using var udp = new UdpClient(_port);
+        using var timerResolution = WindowsTimerResolutionScope.Create1Millisecond();
         _udp = udp;
         _udp.Client.Blocking = false;
         TryDisableUdpConnectionReset(_udp.Client);
@@ -200,13 +201,17 @@ sealed class GameServer
             _config,
             _clientsBySlot,
             _transientEventReplayTicks,
-            SendMessage);
+            SendSnapshotPayload);
 
         Console.WriteLine($"GG2.Server booting at {_config.TicksPerSecond} ticks/sec.");
         Console.WriteLine($"Protocol version: {ProtocolVersion.Current}");
         Console.WriteLine($"UDP bind: 0.0.0.0:{_port}");
         Console.WriteLine($"Name: {_serverName}");
         Console.WriteLine($"Max players: {_maxPlayableClients}");
+        if (timerResolution.IsActive)
+        {
+            Console.WriteLine("[server] high-resolution timer enabled (1 ms).");
+        }
         if (_timeLimitMinutesOverride.HasValue)
         {
             Console.WriteLine($"Time limit: {_timeLimitMinutesOverride.Value} minutes");
@@ -250,22 +255,23 @@ sealed class GameServer
                 PumpIncomingPackets();
                 _sessionManager.RefreshPasswordRequests();
 
-                _sessionManager.ApplyPlayableClientInputs();
-
                 var now = _clock.Elapsed;
                 var elapsedSeconds = (now - _previous).TotalSeconds;
                 _previous = now;
 
-                var ticks = _simulator.Step(elapsedSeconds, () =>
-                {
-                    _autoBalancer.Tick(now, 1, _autoBalanceEnabled);
-                    if (_mapRotationManager.TryApplyPendingMapChange())
+                var ticks = ServerSimulationBatch.Advance(
+                    _simulator,
+                    elapsedSeconds,
+                    _sessionManager.PreparePlayableClientInputsForNextTick,
+                    () =>
                     {
-                        _snapshotBroadcaster.ResetTransientEvents();
-                    }
-
-                    _snapshotBroadcaster.BroadcastSnapshot();
-                });
+                        _autoBalancer.Tick(now, 1, _autoBalanceEnabled);
+                        if (_mapRotationManager.TryApplyPendingMapChange())
+                        {
+                            _snapshotBroadcaster.ResetTransientEvents();
+                        }
+                    },
+                    _snapshotBroadcaster.BroadcastSnapshot);
                 _lobbyRegistrar?.Tick(now, BuildLobbyServerName(_serverName, _world, _clientsBySlot, _passwordRequired, _maxPlayableClients));
 
                 if (ticks > 0 && _world.Frame % _config.TicksPerSecond == 0)
@@ -378,12 +384,7 @@ sealed class GameServer
                         {
                             break;
                         }
-                        if (!client.HasAcceptedInput || IsSequenceNewer(input.Sequence, client.LastInputSequence))
-                        {
-                            client.LastInputSequence = input.Sequence;
-                            client.LatestInput = ToCoreInput(input);
-                            client.HasAcceptedInput = true;
-                        }
+                        client.TrySetLatestInput(input.Sequence, ToCoreInput(input));
 
                         if (input.ChatBubbleFrameIndex >= 0)
                         {
@@ -571,7 +572,7 @@ sealed class GameServer
         var lobbyValue = _useLobbyServer ? $"enabled {_lobbyHost}:{_lobbyPort}" : "disabled";
         var passwordValue = _passwordRequired ? "required" : "off";
         lines.Add(
-            $"[server] status | name={_serverName} | port={_port} | players={activePlayableCount}/{_maxPlayableClients} | spectators={spectatorCount} | map={_world.Level.Name} area={_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount} | mode={_world.MatchRules.Mode} | phase={_world.MatchState.Phase} | score={_world.RedCaps}-{_world.BlueCaps} | lobby={lobbyValue} | password={passwordValue} | uptime={uptime}");
+            $"[server] status | name={_serverName} | port={_port} | tickrate={_config.TicksPerSecond} | players={activePlayableCount}/{_maxPlayableClients} | spectators={spectatorCount} | map={_world.Level.Name} area={_world.Level.MapAreaIndex}/{_world.Level.MapAreaCount} | mode={_world.MatchRules.Mode} | phase={_world.MatchState.Phase} | score={_world.RedCaps}-{_world.BlueCaps} | lobby={lobbyValue} | password={passwordValue} | uptime={uptime}");
     }
 
     private void AddConsoleRulesSummary(List<string> lines)
@@ -686,6 +687,16 @@ sealed class GameServer
     private void SendMessage(IPEndPoint remoteEndPoint, IProtocolMessage message)
     {
         var payload = ProtocolCodec.Serialize(message);
+        SendPayload(remoteEndPoint, payload);
+    }
+
+    private void SendSnapshotPayload(IPEndPoint remoteEndPoint, SnapshotMessage snapshot, byte[] payload)
+    {
+        SendPayload(remoteEndPoint, payload);
+    }
+
+    private void SendPayload(IPEndPoint remoteEndPoint, byte[] payload)
+    {
         _udp.Send(payload, payload.Length, remoteEndPoint);
     }
 

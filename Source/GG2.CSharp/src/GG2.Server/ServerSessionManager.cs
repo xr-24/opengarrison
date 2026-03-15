@@ -65,14 +65,16 @@ sealed class ServerSessionManager
         _world.TrySetNetworkPlayerName(slot, name);
     }
 
-    public void ApplyPlayableClientInputs()
+    public void PreparePlayableClientInputsForNextTick()
     {
         for (var index = 0; index < SimulationWorld.NetworkPlayerSlots.Count; index += 1)
         {
             var slot = SimulationWorld.NetworkPlayerSlots[index];
-            if (_clientsBySlot.TryGetValue(slot, out var client) && client.IsAuthorized)
+            if (_clientsBySlot.TryGetValue(slot, out var client)
+                && client.IsAuthorized
+                && client.TryGetInputForNextTick(out var input))
             {
-                _world.TrySetNetworkPlayerInput(slot, client.LatestInput);
+                _world.TrySetNetworkPlayerInput(slot, input);
             }
             else
             {

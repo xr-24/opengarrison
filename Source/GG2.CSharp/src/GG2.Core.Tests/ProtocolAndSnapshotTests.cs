@@ -456,6 +456,108 @@ public sealed class ProtocolAndSnapshotTests
     }
 
     [Fact]
+    public void ApplySnapshot_ReusesTransientEntitiesWhenIdentityIsStable()
+    {
+        var world = new SimulationWorld();
+        var initialSnapshot = CreateSnapshot() with
+        {
+            Shots =
+            [
+                new SnapshotShotState(601, (byte)PlayerTeam.Red, 1, 310f, 255f, 4f, 0f, 10),
+            ],
+            Rockets =
+            [
+                new SnapshotRocketState(604, (byte)PlayerTeam.Red, 1, 340f, 280f, 338f, 279f, 0.5f, 13f, 20),
+            ],
+            DeadBodies =
+            [
+                new SnapshotDeadBodyState(609, (byte)PlayerTeam.Red, (byte)PlayerClass.Soldier, 390f, 305f, 24f, 36f, 0f, 1f, false, 25),
+            ],
+        };
+
+        Assert.True(world.ApplySnapshot(initialSnapshot, localPlayerSlot: 1));
+        var initialShot = Assert.Single(world.Shots);
+        var initialRocket = Assert.Single(world.Rockets);
+        var initialDeadBody = Assert.Single(world.DeadBodies);
+
+        var updatedSnapshot = initialSnapshot with
+        {
+            Frame = initialSnapshot.Frame + 1UL,
+            Shots =
+            [
+                new SnapshotShotState(601, (byte)PlayerTeam.Red, 1, 324f, 257f, 5f, 0.5f, 8),
+            ],
+            Rockets =
+            [
+                new SnapshotRocketState(604, (byte)PlayerTeam.Red, 1, 356f, 288f, 352f, 286f, 0.65f, 11f, 17),
+            ],
+            DeadBodies =
+            [
+                new SnapshotDeadBodyState(609, (byte)PlayerTeam.Red, (byte)PlayerClass.Soldier, 402f, 311f, 24f, 36f, 1.5f, -0.5f, false, 22),
+            ],
+        };
+
+        Assert.True(world.ApplySnapshot(updatedSnapshot, localPlayerSlot: 1));
+        var updatedShot = Assert.Single(world.Shots);
+        var updatedRocket = Assert.Single(world.Rockets);
+        var updatedDeadBody = Assert.Single(world.DeadBodies);
+
+        Assert.Same(initialShot, updatedShot);
+        Assert.Equal(324f, updatedShot.X);
+        Assert.Equal(257f, updatedShot.Y);
+        Assert.Equal(8, updatedShot.TicksRemaining);
+
+        Assert.Same(initialRocket, updatedRocket);
+        Assert.Equal(356f, updatedRocket.X);
+        Assert.Equal(288f, updatedRocket.Y);
+        Assert.Equal(17, updatedRocket.TicksRemaining);
+
+        Assert.Same(initialDeadBody, updatedDeadBody);
+        Assert.Equal(402f, updatedDeadBody.X);
+        Assert.Equal(311f, updatedDeadBody.Y);
+        Assert.Equal(22, updatedDeadBody.TicksRemaining);
+    }
+
+    [Fact]
+    public void ApplySnapshot_RecreatesTransientEntitiesWhenIdentityChangesForExistingId()
+    {
+        var world = new SimulationWorld();
+        var initialSnapshot = CreateSnapshot() with
+        {
+            Rockets =
+            [
+                new SnapshotRocketState(604, (byte)PlayerTeam.Red, 1, 340f, 280f, 338f, 279f, 0.5f, 13f, 20),
+            ],
+            DeadBodies =
+            [
+                new SnapshotDeadBodyState(609, (byte)PlayerTeam.Red, (byte)PlayerClass.Soldier, 390f, 305f, 24f, 36f, 0f, 1f, false, 25),
+            ],
+        };
+
+        Assert.True(world.ApplySnapshot(initialSnapshot, localPlayerSlot: 1));
+        var initialRocket = Assert.Single(world.Rockets);
+        var initialDeadBody = Assert.Single(world.DeadBodies);
+
+        var changedIdentitySnapshot = initialSnapshot with
+        {
+            Frame = initialSnapshot.Frame + 1UL,
+            Rockets =
+            [
+                new SnapshotRocketState(604, (byte)PlayerTeam.Blue, 2, 352f, 288f, 348f, 286f, 1.1f, 9f, 16),
+            ],
+            DeadBodies =
+            [
+                new SnapshotDeadBodyState(609, (byte)PlayerTeam.Blue, (byte)PlayerClass.Sniper, 404f, 314f, 20f, 32f, 0f, 0f, true, 18),
+            ],
+        };
+
+        Assert.True(world.ApplySnapshot(changedIdentitySnapshot, localPlayerSlot: 1));
+
+        Assert.NotSame(initialRocket, Assert.Single(world.Rockets));
+        Assert.NotSame(initialDeadBody, Assert.Single(world.DeadBodies));
+    }
+
+    [Fact]
     public void ApplySnapshot_UpdatesGeneratorState()
     {
         var world = new SimulationWorld();

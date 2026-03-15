@@ -1,8 +1,11 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using GG2.Core;
 using GG2.Protocol;
+using Microsoft.Xna.Framework;
 
 namespace GG2.Client;
 
@@ -10,8 +13,20 @@ public partial class Game1
 {
     private void ProcessNetworkMessages()
     {
-        foreach (var message in _networkClient.ReceiveMessages())
+        var processStartTimestamp = _networkDiagnosticsEnabled ? Stopwatch.GetTimestamp() : 0L;
+        var messages = _networkClient.ReceiveMessages();
+        if (_networkDiagnosticsEnabled)
         {
+            RecordNetworkReceiveDiagnostics(_networkClient.LastReceiveDiagnostics);
+        }
+
+        var latestBufferedSnapshotFrame = Math.Max(_lastAppliedSnapshotFrame, _lastBufferedSnapshotFrame);
+        SnapshotMessage? latestResolvedSnapshot = null;
+        Dictionary<ulong, SnapshotMessage>? resolvedBatchSnapshotsByFrame = null;
+        List<SnapshotMessage>? resolvedBatchSnapshots = null;
+        foreach (var message in messages)
+        {
+            RecordNetworkMessageProcessed(message);
             switch (message)
             {
                 case WelcomeMessage welcome:
@@ -23,6 +38,7 @@ public partial class Game1
                         break;
                     }
 
+                    ReinitializeSimulationForTickRate(welcome.TickRate);
                     _networkClient.SetLocalPlayerSlot(welcome.PlayerSlot);
                     _networkClient.ClearPendingTeamSelection();
                     _networkClient.ClearPendingClassSelection();
@@ -30,11 +46,13 @@ public partial class Game1
                     _world.TryLoadLevel(welcome.LevelName);
                     _pendingHostedConnectTicks = -1;
                     _lastAppliedSnapshotFrame = 0;
+                    _lastBufferedSnapshotFrame = 0;
                     _hasReceivedSnapshot = false;
                     _lastSnapshotReceivedTimeSeconds = -1d;
                     _latestSnapshotServerTimeSeconds = -1d;
                     _latestSnapshotReceivedClockSeconds = -1d;
-                    _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+                    _networkSnapshotInterpolationDurationSeconds = 1f / _config.TicksPerSecond;
+                    _smoothedSnapshotIntervalSeconds = 1f / _config.TicksPerSecond;
                     _smoothedSnapshotJitterSeconds = 0f;
                     _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
                     _remotePlayerRenderTimeSeconds = 0d;
@@ -161,15 +179,18 @@ public partial class Game1
 
                     break;
                 case SnapshotMessage snapshot:
-                    if (snapshot.Frame <= _lastAppliedSnapshotFrame)
+                    if (snapshot.Frame <= latestBufferedSnapshotFrame)
                     {
+                        RecordStaleSnapshot();
                         break;
                     }
 
                     SnapshotMessage? baselineSnapshot = null;
                     if (snapshot.IsDelta && snapshot.BaselineFrame != 0
+                        && !(resolvedBatchSnapshotsByFrame?.TryGetValue(snapshot.BaselineFrame, out baselineSnapshot) ?? false)
                         && !TryGetSnapshotState(snapshot.BaselineFrame, out baselineSnapshot))
                     {
+                        RecordMissingBaselineSnapshot();
                         AddConsoleLine($"snapshot {snapshot.Frame} missing baseline {snapshot.BaselineFrame}");
                         break;
                     }
@@ -181,23 +202,18 @@ public partial class Game1
                     }
                     catch (InvalidOperationException ex)
                     {
+                        RecordRejectedSnapshot();
                         AddConsoleLine($"snapshot {snapshot.Frame} rejected: {ex.Message}");
                         break;
                     }
 
                     var localSnapshotPlayer = resolvedSnapshot.Players.FirstOrDefault(player => player.Slot == _networkClient.LocalPlayerSlot);
-                    _localPlayerSnapshotEntityId = localSnapshotPlayer?.PlayerId;
-
-                    _lastAppliedSnapshotFrame = resolvedSnapshot.Frame;
-                    if (!_world.ApplySnapshot(resolvedSnapshot, _networkClient.LocalPlayerSlot))
+                    if (_networkDiagnosticsEnabled && localSnapshotPlayer is not null && _hasPredictedLocalPlayerPosition)
                     {
-                        AddConsoleLine($"snapshot rejected for slot {_networkClient.LocalPlayerSlot}");
-                        break;
+                        RecordPredictionError(Vector2.Distance(_predictedLocalPlayerPosition, new Vector2(localSnapshotPlayer.X, localSnapshotPlayer.Y)));
                     }
 
-                    RememberSnapshotState(resolvedSnapshot);
-                    _networkClient.AcknowledgeSnapshot(resolvedSnapshot.Frame);
-                    _pendingClassSelectTeam = null;
+                    _localPlayerSnapshotEntityId = localSnapshotPlayer?.PlayerId;
                     for (var visualIndex = 0; visualIndex < resolvedSnapshot.VisualEvents.Count; visualIndex += 1)
                     {
                         var visualEvent = resolvedSnapshot.VisualEvents[visualIndex];
@@ -208,10 +224,43 @@ public partial class Game1
 
                         _pendingNetworkVisualEvents.Add(visualEvent);
                     }
-                    CaptureRemoteInterpolationTargets(resolvedSnapshot.Frame, resolvedSnapshot.TickRate);
-                    ReconcileLocalPrediction(resolvedSnapshot.LastProcessedInputSequence);
+
+                    if (resolvedBatchSnapshotsByFrame is null)
+                    {
+                        resolvedBatchSnapshotsByFrame = new Dictionary<ulong, SnapshotMessage>();
+                    }
+
+                    resolvedBatchSnapshotsByFrame[resolvedSnapshot.Frame] = resolvedSnapshot;
+                    resolvedBatchSnapshots ??= new List<SnapshotMessage>();
+                    resolvedBatchSnapshots.Add(resolvedSnapshot);
+                    latestResolvedSnapshot = resolvedSnapshot;
+                    latestBufferedSnapshotFrame = resolvedSnapshot.Frame;
                     break;
             }
+        }
+
+        if (latestResolvedSnapshot is not null && resolvedBatchSnapshots is not null)
+        {
+            UpdateSnapshotTiming(
+                latestResolvedSnapshot.Frame,
+                latestResolvedSnapshot.TickRate,
+                resolvedBatchSnapshots.Count);
+            for (var snapshotIndex = 0; snapshotIndex < resolvedBatchSnapshots.Count; snapshotIndex += 1)
+            {
+                var resolvedBatchSnapshot = resolvedBatchSnapshots[snapshotIndex];
+                RememberSnapshotState(resolvedBatchSnapshot);
+                CaptureRemoteInterpolationTargets(resolvedBatchSnapshot);
+                EnqueueAuthoritativeSnapshot(resolvedBatchSnapshot);
+            }
+
+            _networkClient.AcknowledgeSnapshot(latestResolvedSnapshot.Frame);
+        }
+
+        ApplyNextQueuedAuthoritativeSnapshot();
+
+        if (_networkDiagnosticsEnabled)
+        {
+            RecordProcessNetworkMessagesDuration(GetDiagnosticsElapsedMilliseconds(processStartTimestamp));
         }
 
         if (_networkClient.TryConsumeDisconnectReason(out var disconnectReason))
@@ -229,5 +278,63 @@ public partial class Game1
             (byte)PlayerTeam.Blue => "BLU",
             _ => "??",
         };
+    }
+
+    private void EnqueueAuthoritativeSnapshot(SnapshotMessage snapshot)
+    {
+        if (snapshot.Frame <= _lastBufferedSnapshotFrame)
+        {
+            return;
+        }
+
+        _queuedAuthoritativeSnapshots.Enqueue(snapshot);
+        _lastBufferedSnapshotFrame = snapshot.Frame;
+        while (_queuedAuthoritativeSnapshots.Count > MaxQueuedAuthoritativeSnapshots)
+        {
+            _queuedAuthoritativeSnapshots.Dequeue();
+        }
+    }
+
+    private void ApplyNextQueuedAuthoritativeSnapshot()
+    {
+        if (_queuedAuthoritativeSnapshots.Count == 0)
+        {
+            return;
+        }
+
+        var snapshot = _queuedAuthoritativeSnapshots.Dequeue();
+        var applySnapshotStartTimestamp = _networkDiagnosticsEnabled ? Stopwatch.GetTimestamp() : 0L;
+        if (!_world.ApplySnapshot(snapshot, _networkClient.LocalPlayerSlot))
+        {
+            if (_networkDiagnosticsEnabled)
+            {
+                RecordApplySnapshotDuration(GetDiagnosticsElapsedMilliseconds(applySnapshotStartTimestamp));
+                RecordRejectedSnapshot();
+            }
+
+            AddConsoleLine($"snapshot rejected for slot {_networkClient.LocalPlayerSlot}");
+        }
+        else
+        {
+            _lastAppliedSnapshotFrame = snapshot.Frame;
+            if (_queuedAuthoritativeSnapshots.Count == 0)
+            {
+                _lastBufferedSnapshotFrame = _lastAppliedSnapshotFrame;
+            }
+
+            if (_networkDiagnosticsEnabled)
+            {
+                RecordApplySnapshotDuration(GetDiagnosticsElapsedMilliseconds(applySnapshotStartTimestamp));
+                RecordAppliedSnapshot();
+            }
+
+            _pendingClassSelectTeam = null;
+            var reconcileStartTimestamp = _networkDiagnosticsEnabled ? Stopwatch.GetTimestamp() : 0L;
+            ReconcileLocalPrediction(snapshot.LastProcessedInputSequence);
+            if (_networkDiagnosticsEnabled)
+            {
+                RecordReconcileDuration(GetDiagnosticsElapsedMilliseconds(reconcileStartTimestamp));
+            }
+        }
     }
 }

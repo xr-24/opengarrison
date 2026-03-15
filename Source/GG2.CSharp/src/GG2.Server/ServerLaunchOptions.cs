@@ -21,6 +21,7 @@ sealed class ServerLaunchOptions
     public string? RequestedMap { get; private init; }
     public string? MapRotationFile { get; private init; }
     public IReadOnlyList<string> StockMapRotation { get; private init; } = Array.Empty<string>();
+    public int TickRate { get; private init; } = SimulationConfig.DefaultTicksPerSecond;
     public int MaxPlayableClients { get; private init; }
     public int MaxTotalClients { get; private init; }
     public int MaxSpectatorClients { get; private init; }
@@ -65,6 +66,7 @@ sealed class ServerLaunchOptions
         string? requestedMap = string.IsNullOrWhiteSpace(settings.RequestedMap) ? null : settings.RequestedMap;
         string? mapRotationFile = string.IsNullOrWhiteSpace(settings.MapRotationFile) ? null : settings.MapRotationFile;
         var stockMapRotation = Gg2StockMapCatalog.GetOrderedIncludedMapLevelNames(settings.HostDefaults.StockMapRotation);
+        var tickRate = SimulationConfig.NormalizeTicksPerSecond(settings.TickRate);
         int? timeLimitMinutesOverride = settings.TimeLimitMinutes > 0 ? Math.Clamp(settings.TimeLimitMinutes, 1, 255) : null;
         int? capLimitOverride = settings.CapLimit > 0 ? Math.Clamp(settings.CapLimit, 1, 255) : null;
         int? respawnSecondsOverride = settings.RespawnSeconds >= 0 ? Math.Clamp(settings.RespawnSeconds, 0, 255) : null;
@@ -136,6 +138,19 @@ sealed class ServerLaunchOptions
             if (string.Equals(arg, "--map-rotation", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
             {
                 mapRotationFile = args[index + 1];
+                index += 1;
+                continue;
+            }
+
+            if ((string.Equals(arg, "--tickrate", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(arg, "--tick-rate", StringComparison.OrdinalIgnoreCase))
+                && index + 1 < args.Length)
+            {
+                if (int.TryParse(args[index + 1], out var parsedTickRate))
+                {
+                    tickRate = SimulationConfig.NormalizeTicksPerSecond(parsedTickRate);
+                }
+
                 index += 1;
                 continue;
             }
@@ -233,6 +248,7 @@ sealed class ServerLaunchOptions
             RequestedMap = requestedMap,
             MapRotationFile = mapRotationFile,
             StockMapRotation = stockMapRotation,
+            TickRate = tickRate,
             MaxPlayableClients = maxPlayableClients,
             MaxTotalClients = maxTotalClients,
             MaxSpectatorClients = maxSpectatorClients,

@@ -13,6 +13,16 @@ namespace GG2.Client;
 
 internal sealed class NetworkGameClient : IDisposable
 {
+    internal readonly record struct ReceiveDiagnostics(
+        int PacketsRead,
+        int BytesRead,
+        int ReleasedMessages,
+        int SnapshotMessages,
+        int MaxPayloadBytes,
+        int PendingInboundMessages,
+        double DeserializeMilliseconds,
+        double MaxDeserializeMilliseconds);
+
     private const int WsaConnReset = 10054;
     private const int SioUdpConnReset = -1744830452;
     private const long HelloRetryMilliseconds = 500;
@@ -33,6 +43,7 @@ internal sealed class NetworkGameClient : IDisposable
     private long _lastServerMessageReceivedAtMilliseconds = -1;
     private string? _lastDisconnectReason;
 
+    public bool CollectDiagnostics { get; set; }
     public bool IsConnected => _udpClient is not null && _serverEndPoint is not null;
     public bool IsAwaitingWelcome => IsConnected && LocalPlayerSlot == 0;
     public bool IsSpectator => IsConnected && LocalPlayerSlot >= SimulationWorld.FirstSpectatorSlot;
@@ -40,6 +51,7 @@ internal sealed class NetworkGameClient : IDisposable
     public byte LocalPlayerSlot { get; private set; }
     public string? ServerDescription { get; private set; }
     public int SimulatedLatencyMilliseconds { get; private set; }
+    public ReceiveDiagnostics LastReceiveDiagnostics { get; private set; }
 
     public bool Connect(string host, int port, string playerName, out string error)
     {
@@ -94,6 +106,7 @@ internal sealed class NetworkGameClient : IDisposable
         _connectStartedAtMilliseconds = -1;
         _lastHelloSentAtMilliseconds = -1;
         _lastServerMessageReceivedAtMilliseconds = -1;
+        LastReceiveDiagnostics = default;
     }
 
     public void SetLocalPlayerSlot(byte slot)
@@ -204,6 +217,7 @@ internal sealed class NetworkGameClient : IDisposable
         var udpClient = _udpClient;
         if (!IsConnected || udpClient is null)
         {
+            LastReceiveDiagnostics = default;
             return [];
         }
 
@@ -212,9 +226,17 @@ internal sealed class NetworkGameClient : IDisposable
         udpClient = _udpClient;
         if (!IsConnected || udpClient is null)
         {
+            LastReceiveDiagnostics = default;
             return [];
         }
 
+        var collectDiagnostics = CollectDiagnostics;
+        var packetsRead = 0;
+        var bytesRead = 0;
+        var snapshotMessages = 0;
+        var maxPayloadBytes = 0;
+        var deserializeMilliseconds = 0d;
+        var maxDeserializeMilliseconds = 0d;
         var messages = new List<IProtocolMessage>();
         while (udpClient.Available > 0)
         {
@@ -222,17 +244,38 @@ internal sealed class NetworkGameClient : IDisposable
             {
                 IPEndPoint remoteEndPoint = new(IPAddress.Any, 0);
                 var payload = udpClient.Receive(ref remoteEndPoint);
+                if (collectDiagnostics)
+                {
+                    packetsRead += 1;
+                    bytesRead += payload.Length;
+                    maxPayloadBytes = Math.Max(maxPayloadBytes, payload.Length);
+                }
+
                 if (_serverEndPoint is not null && !EndpointsEqual(remoteEndPoint, _serverEndPoint))
                 {
                     continue;
                 }
 
-                if (!ProtocolCodec.TryDeserialize(payload, out var message) || message is null)
+                var deserializeStartTimestamp = collectDiagnostics ? Stopwatch.GetTimestamp() : 0L;
+                var deserialized = ProtocolCodec.TryDeserialize(payload, out var message);
+                if (collectDiagnostics)
+                {
+                    var elapsedMilliseconds = GetElapsedMilliseconds(deserializeStartTimestamp);
+                    deserializeMilliseconds += elapsedMilliseconds;
+                    maxDeserializeMilliseconds = Math.Max(maxDeserializeMilliseconds, elapsedMilliseconds);
+                }
+
+                if (!deserialized || message is null)
                 {
                     continue;
                 }
 
                 _lastServerMessageReceivedAtMilliseconds = _clock.ElapsedMilliseconds;
+                if (collectDiagnostics && message is SnapshotMessage)
+                {
+                    snapshotMessages += 1;
+                }
+
                 if (SimulatedLatencyMilliseconds > 0)
                 {
                     _pendingInboundMessages.Enqueue(new PendingMessage(_clock.ElapsedMilliseconds + SimulatedLatencyMilliseconds, message));
@@ -256,6 +299,17 @@ internal sealed class NetworkGameClient : IDisposable
             messages.Add(_pendingInboundMessages.Dequeue().Message);
         }
 
+        LastReceiveDiagnostics = collectDiagnostics
+            ? new ReceiveDiagnostics(
+                packetsRead,
+                bytesRead,
+                messages.Count,
+                snapshotMessages,
+                maxPayloadBytes,
+                _pendingInboundMessages.Count,
+                deserializeMilliseconds,
+                maxDeserializeMilliseconds)
+            : default;
         return messages;
     }
 
@@ -409,6 +463,11 @@ internal sealed class NetworkGameClient : IDisposable
         catch (NotSupportedException)
         {
         }
+    }
+
+    private static double GetElapsedMilliseconds(long startTimestamp)
+    {
+        return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
     }
 
     private sealed record PendingControlCommand(uint Sequence, ControlCommandKind Kind, byte Value);

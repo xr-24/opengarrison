@@ -117,6 +117,7 @@ public sealed class Gg2PreferencesDocument
 
         ini.SetString(ServerAdvancedSection, "LobbyHost", LobbyHost);
         ini.SetInt(ServerAdvancedSection, "LobbyPort", LobbyPort);
+        ini.SetInt(ServerAdvancedSection, "TickRate", SimulationConfig.NormalizeTicksPerSecond(HostSettings.TickRate));
         ini.SetInt(ServerAdvancedSection, "MaxPlayableClients", MaxPlayableClients);
         ini.SetInt(ServerAdvancedSection, "MaxTotalClients", MaxTotalClients);
         ini.SetInt(ServerAdvancedSection, "MaxSpectatorClients", MaxSpectatorClients);
@@ -140,6 +141,8 @@ public sealed class Gg2HostSettings
     public int CapLimit { get; set; } = 5;
 
     public int RespawnSeconds { get; set; } = 5;
+
+    public int TickRate { get; set; } = SimulationConfig.DefaultTicksPerSecond;
 
     public bool LobbyAnnounceEnabled { get; set; } = true;
 
@@ -210,6 +213,7 @@ public sealed class Gg2HostSettings
             TimeLimitMinutes = TimeLimitMinutes,
             CapLimit = CapLimit,
             RespawnSeconds = RespawnSeconds,
+            TickRate = TickRate,
             LobbyAnnounceEnabled = LobbyAnnounceEnabled,
             AutoBalanceEnabled = AutoBalanceEnabled,
             DedicatedModeEnabled = DedicatedModeEnabled,
@@ -229,6 +233,8 @@ public sealed class Gg2HostSettings
             TimeLimitMinutes = ini.GetInt("Server", "Time Limit", 15),
             CapLimit = ini.GetInt("Server", "CapLimit", 5),
             RespawnSeconds = ini.GetInt("Server", "Respawn Time", 5),
+            TickRate = SimulationConfig.NormalizeTicksPerSecond(
+                ini.GetInt("Server.Advanced", "TickRate", SimulationConfig.DefaultTicksPerSecond)),
             LobbyAnnounceEnabled = ini.GetBool("Settings", "UseLobby", true),
             AutoBalanceEnabled = ini.GetBool("Server", "AutoBalance", true),
             DedicatedModeEnabled = ini.GetBool("Server", "Dedicated", false),
