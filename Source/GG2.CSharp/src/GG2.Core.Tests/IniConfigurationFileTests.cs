@@ -86,6 +86,7 @@ Kill Cam=0
                 TimeLimitMinutes = 20,
                 CapLimit = 6,
                 RespawnSeconds = 7,
+                TickRate = 60,
                 LobbyAnnounceEnabled = false,
                 AutoBalanceEnabled = false,
                 DedicatedModeEnabled = true,
@@ -104,6 +105,7 @@ Kill Cam=0
         Assert.True(raw.ContainsKey("Settings", "HostingPort"));
         Assert.True(raw.ContainsKey("Settings", "PlayerLimit"));
         Assert.True(raw.ContainsKey("Server", "MapRotation"));
+        Assert.True(raw.ContainsKey("Server.Advanced", "TickRate"));
         Assert.True(raw.ContainsKey("Maps", "arena_lumberyard"));
 
         var loaded = Gg2PreferencesDocument.Load(path);
@@ -111,6 +113,7 @@ Kill Cam=0
         Assert.Equal("Parity Server", loaded.HostSettings.ServerName);
         Assert.Equal(9000, loaded.HostSettings.Port);
         Assert.Equal(12, loaded.HostSettings.Slots);
+        Assert.Equal(60, loaded.HostSettings.TickRate);
         Assert.False(loaded.HostSettings.LobbyAnnounceEnabled);
         Assert.True(loaded.HostSettings.DedicatedModeEnabled);
         Assert.Equal("custom-rotation.txt", loaded.HostSettings.MapRotationFile);

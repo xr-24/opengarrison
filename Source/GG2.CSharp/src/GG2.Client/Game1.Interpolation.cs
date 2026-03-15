@@ -12,6 +12,7 @@ namespace GG2.Client;
 public partial class Game1
 {
     private const int SnapshotStateHistoryLimit = 96;
+    private const int MaxQueuedAuthoritativeSnapshots = 4;
     private const float RemotePlayerTeleportSnapDistance = 128f;
     private const float RemotePlayerExtrapolationDurationSeconds = 0.05f;
     private const float RemotePlayerMinimumInterpolationBackTimeSeconds = 0.12f;
@@ -37,6 +38,7 @@ public partial class Game1
     private readonly Dictionary<int, List<PlayerSnapshotSample>> _remotePlayerSnapshotHistories = new();
     private readonly Dictionary<ulong, SnapshotMessage> _snapshotStatesByFrame = new();
     private readonly Queue<ulong> _snapshotStateFrameOrder = new();
+    private readonly Queue<SnapshotMessage> _queuedAuthoritativeSnapshots = new();
     private readonly Stopwatch _networkInterpolationClock = Stopwatch.StartNew();
     private double _networkInterpolationClockSeconds;
     private float _networkSnapshotInterpolationDurationSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
@@ -52,6 +54,7 @@ public partial class Game1
     private bool _hasReceivedSnapshot;
     private bool _hasRemotePlayerRenderTime;
     private ulong _lastAppliedSnapshotFrame;
+    private ulong _lastBufferedSnapshotFrame;
 
     private Vector2 GetRenderPosition(int entityId, float x, float y, bool allowInterpolation = true)
     {
@@ -121,6 +124,8 @@ public partial class Game1
     {
         _snapshotStatesByFrame.Clear();
         _snapshotStateFrameOrder.Clear();
+        _queuedAuthoritativeSnapshots.Clear();
+        _lastBufferedSnapshotFrame = 0;
     }
 
     private void RememberSnapshotState(SnapshotMessage snapshot)

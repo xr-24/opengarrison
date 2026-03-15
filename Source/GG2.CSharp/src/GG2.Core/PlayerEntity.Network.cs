@@ -2,6 +2,175 @@ namespace GG2.Core;
 
 public sealed partial class PlayerEntity
 {
+    internal readonly record struct PredictionState(
+        PlayerTeam Team,
+        CharacterClassDefinition ClassDefinition,
+        bool IsAlive,
+        float X,
+        float Y,
+        float HorizontalSpeed,
+        float VerticalSpeed,
+        bool IsGrounded,
+        int Health,
+        float Metal,
+        bool IsCarryingIntel,
+        int IntelPickupCooldownTicks,
+        bool IsInSpawnRoom,
+        int RemainingAirJumps,
+        float FacingDirectionX,
+        float AimDirectionDegrees,
+        int CurrentShells,
+        int PrimaryCooldownTicks,
+        int ReloadTicksUntilNextShell,
+        float ContinuousDamageAccumulator,
+        bool IsHeavyEating,
+        int HeavyEatTicksRemaining,
+        float HeavyHealingAccumulator,
+        bool IsTaunting,
+        float TauntFrameIndex,
+        bool IsSniperScoped,
+        int SniperChargeTicks,
+        int UberTicksRemaining,
+        int? MedicHealTargetId,
+        bool IsMedicHealing,
+        float MedicUberCharge,
+        bool IsMedicUberReady,
+        bool IsMedicUbering,
+        int MedicNeedleCooldownTicks,
+        int MedicNeedleRefillTicks,
+        float ContinuousHealingAccumulator,
+        int QuoteBubbleCount,
+        int QuoteBladesOut,
+        int PyroAirblastCooldownTicks,
+        bool IsSpyCloaked,
+        int SpyBackstabWindupTicksRemaining,
+        int SpyBackstabRecoveryTicksRemaining,
+        float SpyBackstabDirectionDegrees,
+        bool IsSpyVisibleToEnemies,
+        int Kills,
+        int Deaths,
+        int Caps,
+        int HealPoints,
+        bool IsChatBubbleVisible,
+        int ChatBubbleFrameIndex,
+        float ChatBubbleAlpha,
+        bool IsChatBubbleFading,
+        int ChatBubbleTicksRemaining);
+
+    internal PredictionState CapturePredictionState()
+    {
+        return new PredictionState(
+            Team,
+            ClassDefinition,
+            IsAlive,
+            X,
+            Y,
+            HorizontalSpeed,
+            VerticalSpeed,
+            IsGrounded,
+            Health,
+            Metal,
+            IsCarryingIntel,
+            IntelPickupCooldownTicks,
+            IsInSpawnRoom,
+            RemainingAirJumps,
+            FacingDirectionX,
+            AimDirectionDegrees,
+            CurrentShells,
+            PrimaryCooldownTicks,
+            ReloadTicksUntilNextShell,
+            ContinuousDamageAccumulator,
+            IsHeavyEating,
+            HeavyEatTicksRemaining,
+            HeavyHealingAccumulator,
+            IsTaunting,
+            TauntFrameIndex,
+            IsSniperScoped,
+            SniperChargeTicks,
+            UberTicksRemaining,
+            MedicHealTargetId,
+            IsMedicHealing,
+            MedicUberCharge,
+            IsMedicUberReady,
+            IsMedicUbering,
+            MedicNeedleCooldownTicks,
+            MedicNeedleRefillTicks,
+            ContinuousHealingAccumulator,
+            QuoteBubbleCount,
+            QuoteBladesOut,
+            PyroAirblastCooldownTicks,
+            IsSpyCloaked,
+            SpyBackstabWindupTicksRemaining,
+            SpyBackstabRecoveryTicksRemaining,
+            SpyBackstabDirectionDegrees,
+            IsSpyVisibleToEnemies,
+            Kills,
+            Deaths,
+            Caps,
+            HealPoints,
+            IsChatBubbleVisible,
+            ChatBubbleFrameIndex,
+            ChatBubbleAlpha,
+            IsChatBubbleFading,
+            ChatBubbleTicksRemaining);
+    }
+
+    internal void RestorePredictionState(in PredictionState state)
+    {
+        Team = state.Team;
+        ClassDefinition = state.ClassDefinition;
+        IsAlive = state.IsAlive;
+        X = state.X;
+        Y = state.Y;
+        HorizontalSpeed = state.HorizontalSpeed;
+        VerticalSpeed = state.VerticalSpeed;
+        IsGrounded = state.IsGrounded;
+        Health = state.Health;
+        Metal = state.Metal;
+        IsCarryingIntel = state.IsCarryingIntel;
+        IntelPickupCooldownTicks = state.IntelPickupCooldownTicks;
+        IsInSpawnRoom = state.IsInSpawnRoom;
+        RemainingAirJumps = state.RemainingAirJumps;
+        FacingDirectionX = state.FacingDirectionX;
+        AimDirectionDegrees = state.AimDirectionDegrees;
+        CurrentShells = state.CurrentShells;
+        PrimaryCooldownTicks = state.PrimaryCooldownTicks;
+        ReloadTicksUntilNextShell = state.ReloadTicksUntilNextShell;
+        ContinuousDamageAccumulator = state.ContinuousDamageAccumulator;
+        IsHeavyEating = state.IsHeavyEating;
+        HeavyEatTicksRemaining = state.HeavyEatTicksRemaining;
+        HeavyHealingAccumulator = state.HeavyHealingAccumulator;
+        IsTaunting = state.IsTaunting;
+        TauntFrameIndex = state.TauntFrameIndex;
+        IsSniperScoped = state.IsSniperScoped;
+        SniperChargeTicks = state.SniperChargeTicks;
+        UberTicksRemaining = state.UberTicksRemaining;
+        MedicHealTargetId = state.MedicHealTargetId;
+        IsMedicHealing = state.IsMedicHealing;
+        MedicUberCharge = state.MedicUberCharge;
+        IsMedicUberReady = state.IsMedicUberReady;
+        IsMedicUbering = state.IsMedicUbering;
+        MedicNeedleCooldownTicks = state.MedicNeedleCooldownTicks;
+        MedicNeedleRefillTicks = state.MedicNeedleRefillTicks;
+        ContinuousHealingAccumulator = state.ContinuousHealingAccumulator;
+        QuoteBubbleCount = state.QuoteBubbleCount;
+        QuoteBladesOut = state.QuoteBladesOut;
+        PyroAirblastCooldownTicks = state.PyroAirblastCooldownTicks;
+        IsSpyCloaked = state.IsSpyCloaked;
+        SpyBackstabWindupTicksRemaining = state.SpyBackstabWindupTicksRemaining;
+        SpyBackstabRecoveryTicksRemaining = state.SpyBackstabRecoveryTicksRemaining;
+        SpyBackstabDirectionDegrees = state.SpyBackstabDirectionDegrees;
+        IsSpyVisibleToEnemies = state.IsSpyVisibleToEnemies;
+        Kills = state.Kills;
+        Deaths = state.Deaths;
+        Caps = state.Caps;
+        HealPoints = state.HealPoints;
+        IsChatBubbleVisible = state.IsChatBubbleVisible;
+        ChatBubbleFrameIndex = state.ChatBubbleFrameIndex;
+        ChatBubbleAlpha = state.ChatBubbleAlpha;
+        IsChatBubbleFading = state.IsChatBubbleFading;
+        ChatBubbleTicksRemaining = state.ChatBubbleTicksRemaining;
+    }
 
     public void ApplyNetworkState(
         PlayerTeam team,

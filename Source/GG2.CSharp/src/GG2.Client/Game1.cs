@@ -77,9 +77,9 @@ public partial class Game1 : Game
     private const int ProcessedNetworkEventHistoryLimit = 4096;
     private readonly GameStartupMode _startupMode;
     private readonly GraphicsDeviceManager _graphics;
-    private readonly SimulationConfig _config;
-    private readonly SimulationWorld _world;
-    private readonly FixedStepSimulator _simulator;
+    private SimulationConfig _config = null!;
+    private SimulationWorld _world = null!;
+    private FixedStepSimulator _simulator = null!;
     private readonly NetworkGameClient _networkClient = new();
     private readonly GameMakerAssetManifest _assetManifest;
     private SpriteBatch _spriteBatch = null!;
@@ -209,12 +209,7 @@ public partial class Game1 : Game
         _graphics.PreferredBackBufferWidth = 1280;
         _graphics.PreferredBackBufferHeight = 720;
 
-        _config = new SimulationConfig
-        {
-            TicksPerSecond = SimulationConfig.DefaultTicksPerSecond,
-        };
-        _world = new SimulationWorld(_config);
-        _simulator = new FixedStepSimulator(_world);
+        ReinitializeSimulationForTickRate(SimulationConfig.DefaultTicksPerSecond);
         _assetManifest = GameMakerAssetManifestImporter.ImportProjectAssets();
         ApplyLoadedSettings();
 
@@ -274,12 +269,14 @@ public partial class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
+        BeginNetworkDiagnosticsFrame(gameTime);
         _networkInterpolationClockSeconds = _networkInterpolationClock.Elapsed.TotalSeconds;
         var clientTicks = ConsumeClientTickCount(gameTime);
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
         if (TryHandlePasswordPromptCancel(keyboard, mouse))
         {
+            FinalizeNetworkDiagnosticsFrame();
             base.Update(gameTime);
             return;
         }
@@ -292,11 +289,13 @@ public partial class Game1 : Game
 
         if (TryUpdateNonGameplayFrame(gameTime, keyboard, mouse, clientTicks))
         {
+            FinalizeNetworkDiagnosticsFrame();
             base.Update(gameTime);
             return;
         }
 
         UpdateGameplayFrame(gameTime, keyboard, mouse, clientTicks);
+        FinalizeNetworkDiagnosticsFrame();
 
         base.Update(gameTime);
     }

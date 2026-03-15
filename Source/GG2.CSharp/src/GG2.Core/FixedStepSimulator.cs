@@ -12,6 +12,11 @@ public sealed class FixedStepSimulator
 
     public int Step(double elapsedSeconds, Action? onTickAdvanced = null)
     {
+        return Step(elapsedSeconds, beforeTickAdvanced: null, onTickAdvanced);
+    }
+
+    public int Step(double elapsedSeconds, Action? beforeTickAdvanced, Action? onTickAdvanced)
+    {
         var frameDelta = _world.Config.FixedDeltaSeconds;
         _accumulatorSeconds += elapsedSeconds;
 
@@ -19,6 +24,7 @@ public sealed class FixedStepSimulator
 
         while (_accumulatorSeconds >= frameDelta)
         {
+            beforeTickAdvanced?.Invoke();
             _world.AdvanceOneTick();
             _accumulatorSeconds -= frameDelta;
             ticks += 1;

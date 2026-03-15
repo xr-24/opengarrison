@@ -156,38 +156,52 @@ public sealed partial class SimulationWorld
 
     private void ApplySnapshotTransientEntities(SnapshotMessage snapshot)
     {
-        ClearTransientSnapshotEntities();
         ApplySnapshotSentries(snapshot.Sentries);
-        ApplySnapshotShots(snapshot.Shots, _shots, state =>
+        ApplySnapshotShots(
+            snapshot.Shots,
+            _shots,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state =>
         {
-            var entity = new ShotProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
-            entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining);
-            return entity;
-        });
-        ApplySnapshotShots(snapshot.Bubbles, _bubbles, state =>
+                return new ShotProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
+            },
+            static (entity, state) => entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining));
+        ApplySnapshotShots(
+            snapshot.Bubbles,
+            _bubbles,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state =>
         {
-            var entity = new BubbleProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
-            entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining);
-            return entity;
-        });
-        ApplySnapshotShots(snapshot.Blades, _blades, state =>
+                return new BubbleProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
+            },
+            static (entity, state) => entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining));
+        ApplySnapshotShots(
+            snapshot.Blades,
+            _blades,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state =>
         {
-            var entity = new BladeProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY, hitDamage: 0);
-            entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining, hitDamage: 0);
-            return entity;
-        });
-        ApplySnapshotShots(snapshot.Needles, _needles, state =>
+                return new BladeProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY, hitDamage: 0);
+            },
+            static (entity, state) => entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining, hitDamage: 0));
+        ApplySnapshotShots(
+            snapshot.Needles,
+            _needles,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state =>
         {
-            var entity = new NeedleProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
-            entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining);
-            return entity;
-        });
-        ApplySnapshotShots(snapshot.RevolverShots, _revolverShots, state =>
+                return new NeedleProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
+            },
+            static (entity, state) => entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining));
+        ApplySnapshotShots(
+            snapshot.RevolverShots,
+            _revolverShots,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state =>
         {
-            var entity = new RevolverProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
-            entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining);
-            return entity;
-        });
+                return new RevolverProjectileEntity(state.Id, (PlayerTeam)state.Team, state.OwnerId, state.X, state.Y, state.VelocityX, state.VelocityY);
+            },
+            static (entity, state) => entity.ApplyNetworkState(state.X, state.Y, state.VelocityX, state.VelocityY, state.TicksRemaining));
         ApplySnapshotRockets(snapshot.Rockets);
         ApplySnapshotFlames(snapshot.Flames);
         ApplySnapshotMines(snapshot.Mines);
@@ -196,228 +210,220 @@ public sealed partial class SimulationWorld
         ApplySnapshotDeadBodies(snapshot.DeadBodies);
     }
 
-    private void ClearTransientSnapshotEntities()
-    {
-        RemoveEntities(_shots);
-        RemoveEntities(_bubbles);
-        RemoveEntities(_blades);
-        RemoveEntities(_needles);
-        RemoveEntities(_revolverShots);
-        RemoveEntities(_flames);
-        RemoveEntities(_rockets);
-        RemoveEntities(_mines);
-        RemoveEntities(_sentries);
-        RemoveEntities(_playerGibs);
-        RemoveEntities(_bloodDrops);
-        RemoveEntities(_deadBodies);
-    }
-
     private void ApplySnapshotSentries(IReadOnlyList<SnapshotSentryState> sentries)
     {
-        for (var index = 0; index < sentries.Count; index += 1)
-        {
-            var sentryState = sentries[index];
-            var entity = new SentryEntity(
-                sentryState.Id,
-                sentryState.OwnerPlayerId,
-                (PlayerTeam)sentryState.Team,
-                sentryState.X,
-                sentryState.Y,
-                sentryState.FacingDirectionX);
-            entity.ApplyNetworkState(
-                sentryState.X,
-                sentryState.Y,
-                sentryState.Health,
-                sentryState.IsBuilt,
-                sentryState.FacingDirectionX,
-                sentryState.DesiredFacingDirectionX,
-                sentryState.AimDirectionDegrees,
-                sentryState.ReloadTicksRemaining,
-                sentryState.AlertTicksRemaining,
-                sentryState.ShotTraceTicksRemaining,
-                sentryState.HasLanded,
-                sentryState.HasActiveTarget,
-                sentryState.CurrentTargetPlayerId < 0 ? null : sentryState.CurrentTargetPlayerId,
-                sentryState.LastShotTargetX,
-                sentryState.LastShotTargetY);
-            _sentries.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            sentries,
+            _sentries,
+            static state => state.Id,
+            static (entity, state) => entity.OwnerPlayerId == state.OwnerPlayerId && entity.Team == (PlayerTeam)state.Team,
+            state => new SentryEntity(
+                state.Id,
+                state.OwnerPlayerId,
+                (PlayerTeam)state.Team,
+                state.X,
+                state.Y,
+                state.FacingDirectionX),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.Health,
+                state.IsBuilt,
+                state.FacingDirectionX,
+                state.DesiredFacingDirectionX,
+                state.AimDirectionDegrees,
+                state.ReloadTicksRemaining,
+                state.AlertTicksRemaining,
+                state.ShotTraceTicksRemaining,
+                state.HasLanded,
+                state.HasActiveTarget,
+                state.CurrentTargetPlayerId < 0 ? null : state.CurrentTargetPlayerId,
+                state.LastShotTargetX,
+                state.LastShotTargetY));
     }
 
-    private void ApplySnapshotShots<T>(IReadOnlyList<SnapshotShotState> shots, List<T> target, Func<SnapshotShotState, T> factory)
+    private void ApplySnapshotShots<T>(
+        IReadOnlyList<SnapshotShotState> shots,
+        List<T> target,
+        Func<T, SnapshotShotState, bool> canReuse,
+        Func<SnapshotShotState, T> factory,
+        Action<T, SnapshotShotState> applyState)
         where T : SimulationEntity
     {
-        for (var index = 0; index < shots.Count; index += 1)
-        {
-            var entity = factory(shots[index]);
-            target.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(shots, target, static state => state.Id, canReuse, factory, applyState);
     }
 
     private void ApplySnapshotRockets(IReadOnlyList<SnapshotRocketState> rockets)
     {
-        for (var index = 0; index < rockets.Count; index += 1)
-        {
-            var rocketState = rockets[index];
-            var entity = new RocketProjectileEntity(
-                rocketState.Id,
-                (PlayerTeam)rocketState.Team,
-                rocketState.OwnerId,
-                rocketState.X,
-                rocketState.Y,
-                rocketState.Speed,
-                rocketState.DirectionRadians);
-            entity.ApplyNetworkState(rocketState.X, rocketState.Y, rocketState.PreviousX, rocketState.PreviousY, rocketState.DirectionRadians, rocketState.Speed, rocketState.TicksRemaining);
-            _rockets.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            rockets,
+            _rockets,
+            static state => state.Id,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state => new RocketProjectileEntity(
+                state.Id,
+                (PlayerTeam)state.Team,
+                state.OwnerId,
+                state.X,
+                state.Y,
+                state.Speed,
+                state.DirectionRadians),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.PreviousX,
+                state.PreviousY,
+                state.DirectionRadians,
+                state.Speed,
+                state.TicksRemaining));
     }
 
     private void ApplySnapshotFlames(IReadOnlyList<SnapshotFlameState> flames)
     {
-        for (var index = 0; index < flames.Count; index += 1)
-        {
-            var flameState = flames[index];
-            var entity = new FlameProjectileEntity(
-                flameState.Id,
-                (PlayerTeam)flameState.Team,
-                flameState.OwnerId,
-                flameState.X,
-                flameState.Y,
-                flameState.VelocityX,
-                flameState.VelocityY);
-            entity.ApplyNetworkState(
-                flameState.X,
-                flameState.Y,
-                flameState.PreviousX,
-                flameState.PreviousY,
-                flameState.VelocityX,
-                flameState.VelocityY,
-                flameState.TicksRemaining,
-                flameState.AttachedPlayerId < 0 ? null : flameState.AttachedPlayerId,
-                flameState.AttachedOffsetX,
-                flameState.AttachedOffsetY);
-            _flames.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            flames,
+            _flames,
+            static state => state.Id,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state => new FlameProjectileEntity(
+                state.Id,
+                (PlayerTeam)state.Team,
+                state.OwnerId,
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.PreviousX,
+                state.PreviousY,
+                state.VelocityX,
+                state.VelocityY,
+                state.TicksRemaining,
+                state.AttachedPlayerId < 0 ? null : state.AttachedPlayerId,
+                state.AttachedOffsetX,
+                state.AttachedOffsetY));
     }
 
     private void ApplySnapshotBloodDrops(IReadOnlyList<SnapshotBloodDropState> bloodDrops)
     {
-        for (var index = 0; index < bloodDrops.Count; index += 1)
-        {
-            var bloodDropState = bloodDrops[index];
-            var entity = new BloodDropEntity(
-                bloodDropState.Id,
-                bloodDropState.X,
-                bloodDropState.Y,
-                bloodDropState.VelocityX,
-                bloodDropState.VelocityY);
-            entity.ApplyNetworkState(
-                bloodDropState.X,
-                bloodDropState.Y,
-                bloodDropState.VelocityX,
-                bloodDropState.VelocityY,
-                bloodDropState.IsStuck,
-                bloodDropState.TicksRemaining);
-            _bloodDrops.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            bloodDrops,
+            _bloodDrops,
+            static state => state.Id,
+            static (_, _) => true,
+            state => new BloodDropEntity(
+                state.Id,
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY,
+                state.IsStuck,
+                state.TicksRemaining));
     }
 
     private void ApplySnapshotMines(IReadOnlyList<SnapshotMineState> mines)
     {
-        for (var index = 0; index < mines.Count; index += 1)
-        {
-            var mineState = mines[index];
-            var entity = new MineProjectileEntity(
-                mineState.Id,
-                (PlayerTeam)mineState.Team,
-                mineState.OwnerId,
-                mineState.X,
-                mineState.Y,
-                mineState.VelocityX,
-                mineState.VelocityY);
-            entity.ApplyNetworkState(
-                mineState.X,
-                mineState.Y,
-                mineState.VelocityX,
-                mineState.VelocityY,
-                mineState.IsStickied,
-                mineState.IsDestroyed,
-                mineState.ExplosionDamage);
-            _mines.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            mines,
+            _mines,
+            static state => state.Id,
+            static (entity, state) => entity.Team == (PlayerTeam)state.Team && entity.OwnerId == state.OwnerId,
+            state => new MineProjectileEntity(
+                state.Id,
+                (PlayerTeam)state.Team,
+                state.OwnerId,
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY,
+                state.IsStickied,
+                state.IsDestroyed,
+                state.ExplosionDamage));
     }
 
     private void ApplySnapshotDeadBodies(IReadOnlyList<SnapshotDeadBodyState> deadBodies)
     {
-        for (var index = 0; index < deadBodies.Count; index += 1)
-        {
-            var deadBodyState = deadBodies[index];
-            var entity = new DeadBodyEntity(
-                deadBodyState.Id,
-                (PlayerClass)deadBodyState.ClassId,
-                (PlayerTeam)deadBodyState.Team,
-                deadBodyState.X,
-                deadBodyState.Y,
-                deadBodyState.Width,
-                deadBodyState.Height,
-                deadBodyState.HorizontalSpeed,
-                deadBodyState.VerticalSpeed,
-                deadBodyState.FacingLeft);
-            entity.ApplyNetworkState(
-                deadBodyState.X,
-                deadBodyState.Y,
-                deadBodyState.HorizontalSpeed,
-                deadBodyState.VerticalSpeed,
-                deadBodyState.TicksRemaining);
-            _deadBodies.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+        SyncSnapshotEntities(
+            deadBodies,
+            _deadBodies,
+            static state => state.Id,
+            static (entity, state) =>
+                entity.ClassId == (PlayerClass)state.ClassId
+                && entity.Team == (PlayerTeam)state.Team
+                && entity.Width == state.Width
+                && entity.Height == state.Height
+                && entity.FacingLeft == state.FacingLeft,
+            state => new DeadBodyEntity(
+                state.Id,
+                (PlayerClass)state.ClassId,
+                (PlayerTeam)state.Team,
+                state.X,
+                state.Y,
+                state.Width,
+                state.Height,
+                state.HorizontalSpeed,
+                state.VerticalSpeed,
+                state.FacingLeft),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.HorizontalSpeed,
+                state.VerticalSpeed,
+                state.TicksRemaining));
     }
 
     private void ApplySnapshotPlayerGibs(IReadOnlyList<SnapshotPlayerGibState> playerGibs)
     {
-        for (var index = 0; index < playerGibs.Count; index += 1)
-        {
-            var playerGibState = playerGibs[index];
-            var entity = new PlayerGibEntity(
-                playerGibState.Id,
-                playerGibState.SpriteName,
-                playerGibState.FrameIndex,
-                playerGibState.X,
-                playerGibState.Y,
-                playerGibState.VelocityX,
-                playerGibState.VelocityY,
-                playerGibState.RotationSpeedDegrees,
+        SyncSnapshotEntities(
+            playerGibs,
+            _playerGibs,
+            static state => state.Id,
+            static (entity, state) =>
+                string.Equals(entity.SpriteName, state.SpriteName, StringComparison.Ordinal)
+                && entity.FrameIndex == state.FrameIndex
+                && entity.BloodChance == state.BloodChance,
+            state => new PlayerGibEntity(
+                state.Id,
+                state.SpriteName,
+                state.FrameIndex,
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY,
+                state.RotationSpeedDegrees,
                 horizontalFriction: 0.4f,
                 rotationFriction: 0.6f,
-                lifetimeTicks: playerGibState.TicksRemaining,
-                bloodChance: playerGibState.BloodChance);
-            entity.ApplyNetworkState(
-                playerGibState.X,
-                playerGibState.Y,
-                playerGibState.VelocityX,
-                playerGibState.VelocityY,
-                playerGibState.RotationDegrees,
-                playerGibState.RotationSpeedDegrees,
-                playerGibState.TicksRemaining);
-            _playerGibs.Add(entity);
-            _entities[entity.Id] = entity;
-        }
+                lifetimeTicks: state.TicksRemaining,
+                bloodChance: state.BloodChance),
+            static (entity, state) => entity.ApplyNetworkState(
+                state.X,
+                state.Y,
+                state.VelocityX,
+                state.VelocityY,
+                state.RotationDegrees,
+                state.RotationSpeedDegrees,
+                state.TicksRemaining));
     }
 
     private void SyncRemoteSnapshotPlayers(IEnumerable<SnapshotPlayerState> snapshotPlayers)
     {
-        var activeSlots = new HashSet<byte>();
+        _snapshotSeenRemotePlayerSlots.Clear();
         _remoteSnapshotPlayers.Clear();
         foreach (var snapshotPlayer in snapshotPlayers)
         {
-            activeSlots.Add(snapshotPlayer.Slot);
+            _snapshotSeenRemotePlayerSlots.Add(snapshotPlayer.Slot);
             if (!_remoteSnapshotPlayersBySlot.TryGetValue(snapshotPlayer.Slot, out var player))
             {
                 ReserveEntityId(snapshotPlayer.PlayerId);
@@ -432,20 +438,80 @@ public sealed partial class SimulationWorld
             _remoteSnapshotPlayers.Add(player);
         }
 
-        var staleSlots = new List<byte>();
+        _snapshotStaleRemotePlayerSlots.Clear();
         foreach (var entry in _remoteSnapshotPlayersBySlot)
         {
-            if (activeSlots.Contains(entry.Key))
+            if (_snapshotSeenRemotePlayerSlots.Contains(entry.Key))
             {
                 continue;
             }
 
-            staleSlots.Add(entry.Key);
+            _snapshotStaleRemotePlayerSlots.Add(entry.Key);
         }
 
-        for (var index = 0; index < staleSlots.Count; index += 1)
+        for (var index = 0; index < _snapshotStaleRemotePlayerSlots.Count; index += 1)
         {
-            _remoteSnapshotPlayersBySlot.Remove(staleSlots[index]);
+            _remoteSnapshotPlayersBySlot.Remove(_snapshotStaleRemotePlayerSlots[index]);
+        }
+    }
+
+    private void SyncSnapshotEntities<TState, TEntity>(
+        IReadOnlyList<TState> snapshotStates,
+        List<TEntity> target,
+        Func<TState, int> idSelector,
+        Func<TEntity, TState, bool> canReuse,
+        Func<TState, TEntity> factory,
+        Action<TEntity, TState> applyState)
+        where TEntity : SimulationEntity
+    {
+        _snapshotSeenEntityIds.Clear();
+        for (var index = 0; index < snapshotStates.Count; index += 1)
+        {
+            _snapshotSeenEntityIds.Add(idSelector(snapshotStates[index]));
+        }
+
+        _snapshotStaleEntityIds.Clear();
+        for (var index = 0; index < target.Count; index += 1)
+        {
+            var entityId = target[index].Id;
+            if (!_snapshotSeenEntityIds.Contains(entityId))
+            {
+                _snapshotStaleEntityIds.Add(entityId);
+            }
+        }
+
+        target.Clear();
+        for (var index = 0; index < snapshotStates.Count; index += 1)
+        {
+            var state = snapshotStates[index];
+            var entityId = idSelector(state);
+            ReserveEntityId(entityId);
+
+            TEntity entity;
+            if (_entities.TryGetValue(entityId, out var existingEntity)
+                && existingEntity is TEntity typedEntity
+                && canReuse(typedEntity, state))
+            {
+                entity = typedEntity;
+            }
+            else
+            {
+                if (existingEntity is not null)
+                {
+                    _entities.Remove(entityId);
+                }
+
+                entity = factory(state);
+            }
+
+            applyState(entity, state);
+            target.Add(entity);
+            _entities[entityId] = entity;
+        }
+
+        for (var index = 0; index < _snapshotStaleEntityIds.Count; index += 1)
+        {
+            _entities.Remove(_snapshotStaleEntityIds[index]);
         }
     }
 

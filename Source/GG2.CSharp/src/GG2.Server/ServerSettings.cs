@@ -37,6 +37,8 @@ sealed class ServerSettings
 
     public int RespawnSeconds { get; set; } = 5;
 
+    public int TickRate { get; set; } = SimulationConfig.DefaultTicksPerSecond;
+
     public Gg2HostSettings HostDefaults { get; set; } = new();
 
     public static ServerSettings Load(string? path = null)
@@ -101,6 +103,7 @@ sealed class ServerSettings
             TimeLimitMinutes = hostDefaults.TimeLimitMinutes,
             CapLimit = hostDefaults.CapLimit,
             RespawnSeconds = hostDefaults.RespawnSeconds,
+            TickRate = SimulationConfig.NormalizeTicksPerSecond(hostDefaults.TickRate),
             HostDefaults = hostDefaults,
         };
     }
@@ -117,6 +120,7 @@ sealed class ServerSettings
         hostDefaults.TimeLimitMinutes = TimeLimitMinutes;
         hostDefaults.CapLimit = CapLimit;
         hostDefaults.RespawnSeconds = RespawnSeconds;
+        hostDefaults.TickRate = SimulationConfig.NormalizeTicksPerSecond(TickRate);
         if (hostDefaults.Slots <= 0)
         {
             hostDefaults.Slots = MaxPlayableClients;

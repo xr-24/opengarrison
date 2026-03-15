@@ -188,13 +188,39 @@ public partial class Game1
 
     private void ApplyPredictedPrimaryFire(PlayerEntity player, PredictedLocalInput predictedInput)
     {
-        if (player.IsTaunting || player.PrimaryWeapon.Kind == PrimaryWeaponKind.Medigun || !predictedInput.Input.FirePrimary)
+        if (player.IsTaunting)
+        {
+            return;
+        }
+
+        if (player.PrimaryWeapon.Kind == PrimaryWeaponKind.Medigun)
+        {
+            if (!predictedInput.Input.FirePrimary)
+            {
+                player.ClearMedicHealingTarget();
+                SyncPredictedLocalPlayerState(player);
+            }
+
+            return;
+        }
+
+        if (!predictedInput.Input.FirePrimary)
         {
             return;
         }
 
         if (player.ClassId == PlayerClass.Spy && TryPredictedStartSpyBackstab(player))
         {
+            return;
+        }
+
+        if (player.ClassId == PlayerClass.Quote)
+        {
+            if (player.TryFireQuoteBubble())
+            {
+                SyncPredictedLocalPlayerState(player);
+            }
+
             return;
         }
 
@@ -244,150 +270,112 @@ public partial class Game1
             return;
         }
 
+        if (player.ClassId == PlayerClass.Pyro)
+        {
+            if (player.TryFirePyroAirblast())
+            {
+                SyncPredictedLocalPlayerState(player);
+            }
+
+            return;
+        }
+
         if (player.ClassId == PlayerClass.Sniper)
         {
             TryPredictedToggleSniperScope(player);
             return;
         }
 
-        if (player.ClassId == PlayerClass.Spy && !predictedInput.Input.FirePrimary)
+        if (player.ClassId == PlayerClass.Spy)
         {
-            TryPredictedToggleSpyCloak(player);
+            if (!predictedInput.Input.FirePrimary)
+            {
+                TryPredictedToggleSpyCloak(player);
+            }
+
+            return;
+        }
+
+        if (player.ClassId == PlayerClass.Quote && player.TryFireQuoteBlade())
+        {
+            SyncPredictedLocalPlayerState(player);
         }
     }
 
     private bool TryPredictedFirePrimaryWeapon(PlayerEntity player)
     {
-        if (!player.IsAlive
-            || _predictedLocalActionState.IsHeavyEating
-            || player.IsTaunting
-            || _predictedLocalActionState.IsSpyCloaked
-            || _predictedLocalActionState.PrimaryCooldownTicks > 0
-            || _predictedLocalActionState.CurrentShells < player.PrimaryWeapon.AmmoPerShot)
+        if (!player.TryFirePrimaryWeapon())
         {
             return false;
         }
 
-        _predictedLocalActionState.CurrentShells -= player.PrimaryWeapon.AmmoPerShot;
-        _predictedLocalActionState.PrimaryCooldownTicks = GetPredictedPrimaryCooldownAfterShot(player);
-        if (player.PrimaryWeapon.AutoReloads
-            && _predictedLocalActionState.CurrentShells < player.PrimaryWeapon.MaxAmmo
-            && _predictedLocalActionState.ReloadTicksUntilNextShell <= 0)
-        {
-            _predictedLocalActionState.ReloadTicksUntilNextShell = player.PrimaryWeapon.AmmoReloadTicks;
-        }
-
-        if (player.ClassId == PlayerClass.Sniper && _predictedLocalActionState.IsSniperScoped)
-        {
-            _predictedLocalActionState.SniperChargeTicks = 0;
-        }
-
+        SyncPredictedLocalPlayerState(player);
         return true;
-    }
-
-    private int GetPredictedPrimaryCooldownAfterShot(PlayerEntity player)
-    {
-        if (player.ClassId == PlayerClass.Sniper && _predictedLocalActionState.IsSniperScoped)
-        {
-            return player.PrimaryWeapon.ReloadDelayTicks + PlayerEntity.SniperScopedReloadBonusTicks;
-        }
-
-        return player.PrimaryWeapon.ReloadDelayTicks;
     }
 
     private bool TryPredictedStartHeavySelfHeal(PlayerEntity player)
     {
-        if (!player.IsAlive || player.ClassId != PlayerClass.Heavy || _predictedLocalActionState.IsHeavyEating || player.IsTaunting)
+        if (!player.TryStartHeavySelfHeal())
         {
             return false;
         }
 
-        _predictedLocalActionState.IsHeavyEating = true;
-        _predictedLocalActionState.HeavyEatTicksRemaining = PlayerEntity.HeavyEatDurationTicks;
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 
     private bool TryPredictedToggleSniperScope(PlayerEntity player)
     {
-        if (!player.IsAlive || player.ClassId != PlayerClass.Sniper || player.IsTaunting)
+        if (!player.TryToggleSniperScope())
         {
             return false;
         }
 
-        _predictedLocalActionState.IsSniperScoped = !_predictedLocalActionState.IsSniperScoped;
-        if (!_predictedLocalActionState.IsSniperScoped)
-        {
-            _predictedLocalActionState.SniperChargeTicks = 0;
-        }
-
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 
     private bool TryPredictedToggleSpyCloak(PlayerEntity player)
     {
-        if (!player.IsAlive
-            || player.ClassId != PlayerClass.Spy
-            || player.IsCarryingIntel
-            || IsPredictedSpyBackstabAnimating()
-            || player.IsTaunting)
+        if (!player.TryToggleSpyCloak())
         {
             return false;
         }
 
-        _predictedLocalActionState.IsSpyCloaked = !_predictedLocalActionState.IsSpyCloaked;
-        if (!_predictedLocalActionState.IsSpyCloaked)
-        {
-            _predictedLocalActionState.IsSpyVisibleToEnemies = false;
-        }
-
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 
     private bool TryPredictedStartSpyBackstab(PlayerEntity player)
     {
-        if (!player.IsAlive
-            || player.ClassId != PlayerClass.Spy
-            || !_predictedLocalActionState.IsSpyCloaked
-            || !IsPredictedSpyBackstabReady()
-            || player.IsTaunting)
+        if (!player.TryStartSpyBackstab(player.AimDirectionDegrees))
         {
             return false;
         }
 
-        _predictedLocalActionState.SpyBackstabWindupTicksRemaining = PlayerEntity.SpyBackstabWindupTicksDefault;
-        _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining = 0;
-        _predictedLocalActionState.IsSpyVisibleToEnemies = true;
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 
     private bool TryPredictedFireMedicNeedle(PlayerEntity player)
     {
-        if (!player.IsAlive
-            || player.ClassId != PlayerClass.Medic
-            || player.IsTaunting
-            || player.IsMedicHealing
-            || _predictedLocalActionState.IsMedicUbering
-            || _predictedLocalActionState.MedicNeedleCooldownTicks > 0
-            || _predictedLocalActionState.CurrentShells <= 0)
+        if (!player.TryFireMedicNeedle())
         {
             return false;
         }
 
-        _predictedLocalActionState.CurrentShells -= 1;
-        _predictedLocalActionState.MedicNeedleCooldownTicks = PlayerEntity.MedicNeedleFireCooldownTicks;
-        _predictedLocalActionState.MedicNeedleRefillTicks = 0;
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 
     private bool TryPredictedStartMedicUber(PlayerEntity player)
     {
-        if (!player.IsAlive || player.ClassId != PlayerClass.Medic || !_predictedLocalActionState.IsMedicUberReady)
+        if (!player.TryStartMedicUber())
         {
             return false;
         }
 
-        _predictedLocalActionState.IsMedicUbering = true;
-        _predictedLocalActionState.IsMedicUberReady = false;
+        SyncPredictedLocalPlayerState(player);
         return true;
     }
 

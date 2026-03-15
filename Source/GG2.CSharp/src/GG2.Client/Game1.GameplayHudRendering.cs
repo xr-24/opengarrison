@@ -74,6 +74,8 @@ public partial class Game1
             DrawConsoleOverlay();
         }
 
+        DrawNetworkDiagnosticsOverlay();
+
         if (_inGameMenuOpen)
         {
             DrawInGameMenu();

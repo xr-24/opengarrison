@@ -29,12 +29,9 @@ public sealed class SnapshotBroadcasterTests
             config,
             clientsBySlot,
             transientEventReplayTicks: 4,
-            (_, message) =>
+            (_, snapshot, _) =>
             {
-                if (message is SnapshotMessage snapshot)
-                {
-                    sentSnapshots.Add(snapshot);
-                }
+                sentSnapshots.Add(snapshot);
             });
         var simulator = new FixedStepSimulator(world);
 
@@ -64,12 +61,9 @@ public sealed class SnapshotBroadcasterTests
             config,
             clientsBySlot,
             transientEventReplayTicks: 4,
-            (_, message) =>
+            (_, snapshot, _) =>
             {
-                if (message is SnapshotMessage snapshot)
-                {
-                    sentSnapshots.Add(snapshot);
-                }
+                sentSnapshots.Add(snapshot);
             });
         var simulator = new FixedStepSimulator(world);
 
@@ -106,6 +100,39 @@ public sealed class SnapshotBroadcasterTests
         Assert.True(ProtocolCodec.Serialize(deltaSnapshot).Length <= 1200);
         Assert.NotEmpty(deltaSnapshot.Shots);
         Assert.True(deltaSnapshot.Shots.Count < crowdedShots.Length);
+    }
+
+    [Fact]
+    public void BroadcastSnapshot_WithSmallScene_SendsFullSnapshot()
+    {
+        var world = new SimulationWorld();
+        var config = world.Config;
+        var clientsBySlot = new Dictionary<byte, ClientSession>
+        {
+            [SimulationWorld.LocalPlayerSlot] = new(
+                SimulationWorld.LocalPlayerSlot,
+                new IPEndPoint(IPAddress.Loopback, 8190),
+                "Player",
+                TimeSpan.Zero),
+        };
+        var sentSnapshots = new List<SnapshotMessage>();
+        var broadcaster = new SnapshotBroadcaster(
+            world,
+            config,
+            clientsBySlot,
+            transientEventReplayTicks: 4,
+            (_, snapshot, _) =>
+            {
+                sentSnapshots.Add(snapshot);
+            });
+        var simulator = new FixedStepSimulator(world);
+
+        simulator.Step(config.FixedDeltaSeconds * 1.1d, broadcaster.BroadcastSnapshot);
+
+        var snapshot = Assert.Single(sentSnapshots);
+        Assert.False(snapshot.IsDelta);
+        Assert.Equal(0UL, snapshot.BaselineFrame);
+        Assert.True(ProtocolCodec.Serialize(snapshot).Length <= 1200);
     }
 
     private static SnapshotMessage CreateSnapshot(SimulationWorld world, IReadOnlyList<SnapshotShotState>? shots = null)

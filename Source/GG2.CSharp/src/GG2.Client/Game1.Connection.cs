@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using GG2.Core;
+using Microsoft.Xna.Framework;
 
 namespace GG2.Client;
 
@@ -120,11 +121,13 @@ public partial class Game1
             RecordRecentConnection(host, port);
             ResetClientTimingState();
             _lastAppliedSnapshotFrame = 0;
+            _lastBufferedSnapshotFrame = 0;
             _hasReceivedSnapshot = false;
             _lastSnapshotReceivedTimeSeconds = -1d;
             _latestSnapshotServerTimeSeconds = -1d;
             _latestSnapshotReceivedClockSeconds = -1d;
-            _smoothedSnapshotIntervalSeconds = 1f / SimulationConfig.DefaultTicksPerSecond;
+            _networkSnapshotInterpolationDurationSeconds = 1f / _config.TicksPerSecond;
+            _smoothedSnapshotIntervalSeconds = 1f / _config.TicksPerSecond;
             _smoothedSnapshotJitterSeconds = 0f;
             _remotePlayerInterpolationBackTimeSeconds = RemotePlayerMinimumInterpolationBackTimeSeconds;
             _remotePlayerRenderTimeSeconds = 0d;
@@ -133,6 +136,8 @@ public partial class Game1
             _pendingNetworkVisualEvents.Clear();
             _hasPredictedLocalPlayerPosition = false;
             _hasSmoothedLocalPlayerRenderPosition = false;
+            _predictedLocalPlayerRenderCorrectionOffset = Vector2.Zero;
+            _lastPredictedRenderSmoothingTimeSeconds = -1d;
             _pendingPredictedInputs.Clear();
             _localPlayerSnapshotEntityId = null;
             _entityInterpolationTracks.Clear();
@@ -165,7 +170,10 @@ public partial class Game1
     private void ReturnToMainMenu(string? statusMessage = null)
     {
         _networkClient.Disconnect();
+        ReinitializeSimulationForTickRate(SimulationConfig.DefaultTicksPerSecond);
         ResetClientTimingState();
+        _lastAppliedSnapshotFrame = 0;
+        _lastBufferedSnapshotFrame = 0;
         StopHostedServer();
         _pendingHostedConnectTicks = -1;
         _pendingHostedConnectPort = 8190;
@@ -195,6 +203,11 @@ public partial class Game1
         _passwordEditBuffer = string.Empty;
         _passwordPromptMessage = string.Empty;
         _localPlayerSnapshotEntityId = null;
+        _hasPredictedLocalPlayerPosition = false;
+        _hasSmoothedLocalPlayerRenderPosition = false;
+        _predictedLocalPlayerRenderCorrectionOffset = Vector2.Zero;
+        _lastPredictedRenderSmoothingTimeSeconds = -1d;
+        _pendingPredictedInputs.Clear();
         ResetSnapshotStateHistory();
         _menuStatusMessage = statusMessage ?? string.Empty;
         _autoBalanceNoticeText = string.Empty;
