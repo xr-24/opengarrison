@@ -159,17 +159,33 @@ public partial class Game1
         var cloakAlpha = Math.Clamp(GetPlayerSpyCloakAlpha(player), 0f, 1f);
         if (ReferenceEquals(player, _world.LocalPlayer))
         {
-            return cloakAlpha;
+            return Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha);
         }
 
         if (player.Team == _world.LocalPlayer.Team)
         {
-            return GetPlayerIsSpyBackstabAnimating(player)
-                ? cloakAlpha
-                : Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha);
+            return GetPlayerIsSpyBackstabReady(player)
+                ? Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha)
+                : cloakAlpha;
+        }
+
+        if (IsSpyHiddenFromLocalViewer(player))
+        {
+            return 0f;
         }
 
         return cloakAlpha;
+    }
+
+    private bool GetPlayerIsSpyBackstabReady(PlayerEntity player)
+    {
+        if (!IsUsingPredictedLocalState(player))
+        {
+            return player.IsSpyBackstabReady;
+        }
+
+        return _predictedLocalActionState.SpyBackstabWindupTicksRemaining <= 0
+            && _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining <= 0;
     }
 
     private bool GetPlayerIsSpyBackstabAnimating(PlayerEntity player)
@@ -179,8 +195,36 @@ public partial class Game1
             return player.IsSpyBackstabAnimating;
         }
 
-        return _predictedLocalActionState.SpyBackstabWindupTicksRemaining > 0
-            || _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining > 0;
+        return _predictedLocalActionState.SpyBackstabVisualTicksRemaining > 0;
+    }
+
+    private bool IsSpyHiddenFromLocalViewer(PlayerEntity player)
+    {
+        if (_networkClient.IsSpectator
+            || ReferenceEquals(player, _world.LocalPlayer)
+            || player.ClassId != PlayerClass.Spy
+            || player.Team == _world.LocalPlayer.Team
+            || !GetPlayerIsSpyCloaked(player)
+            || !_world.LocalPlayer.IsAlive)
+        {
+            return false;
+        }
+
+        return IsSpyHiddenFromLocalViewer(player.Id, player.Team, player.X);
+    }
+
+    private bool IsSpyHiddenFromLocalViewer(int ownerId, PlayerTeam ownerTeam, float spyX)
+    {
+        if (_networkClient.IsSpectator
+            || !_world.LocalPlayer.IsAlive
+            || ownerId == _world.LocalPlayer.Id
+            || ownerTeam == _world.LocalPlayer.Team)
+        {
+            return false;
+        }
+
+        var viewerFacingSign = IsFacingLeftByAim(_world.LocalPlayer) ? -1 : 1;
+        return Math.Sign(spyX - _world.LocalPlayer.X) == -viewerFacingSign;
     }
 
     private float GetPlayerMedicUberCharge(PlayerEntity player)

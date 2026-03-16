@@ -92,6 +92,7 @@ public sealed partial class SimulationWorld
             target.AddImpulse(
                 MathF.Cos(aimRadians) * PyroAirblastPlayerImpulse * scale,
                 MathF.Sin(aimRadians) * PyroAirblastPlayerImpulse * scale + PyroAirblastPlayerLift * scale);
+            target.SetMovementState(LegacyMovementState.Airblast);
         }
 
         if (EnemyPlayerEnabled
@@ -105,6 +106,7 @@ public sealed partial class SimulationWorld
             EnemyPlayer.AddImpulse(
                 MathF.Cos(aimRadians) * PyroAirblastPlayerImpulse * scale,
                 MathF.Sin(aimRadians) * PyroAirblastPlayerImpulse * scale + PyroAirblastPlayerLift * scale);
+            EnemyPlayer.SetMovementState(LegacyMovementState.Airblast);
         }
     }
 

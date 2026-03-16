@@ -10,6 +10,7 @@ namespace GG2.Client;
 public partial class Game1
 {
     private const int ClientUpdateTicksPerSecond = 60;
+    private const double ClientUpdateStepSeconds = 1d / ClientUpdateTicksPerSecond;
     private double _clientTickAccumulatorSeconds;
     private double _networkInputAccumulatorSeconds;
     private float _clientUpdateElapsedSeconds;
@@ -24,9 +25,9 @@ public partial class Game1
 
         var ticks = 0;
         var maxCatchUpTicks = 8;
-        while (_clientTickAccumulatorSeconds >= _config.FixedDeltaSeconds && ticks < maxCatchUpTicks)
+        while (_clientTickAccumulatorSeconds >= ClientUpdateStepSeconds && ticks < maxCatchUpTicks)
         {
-            _clientTickAccumulatorSeconds -= _config.FixedDeltaSeconds;
+            _clientTickAccumulatorSeconds -= ClientUpdateStepSeconds;
             ticks += 1;
         }
 

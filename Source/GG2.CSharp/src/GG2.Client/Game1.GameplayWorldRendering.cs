@@ -226,17 +226,14 @@ public partial class Game1
             ? new Color(255, 180, 80)
             : Color.OrangeRed;
         var playerSpriteTint = GetPlayerColor(_world.LocalPlayer, Color.White);
-        if (!GetPlayerIsSpyBackstabAnimating(_world.LocalPlayer))
+        if (!TryDrawPlayerSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint))
         {
-            if (!TryDrawPlayerSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint))
-            {
-                _spriteBatch.Draw(_pixel, playerRectangle, playerFallbackColor * visibilityAlpha);
-            }
+            _spriteBatch.Draw(_pixel, playerRectangle, playerFallbackColor * visibilityAlpha);
+        }
 
-            if (!GetPlayerIsHeavyEating(_world.LocalPlayer) && !_world.LocalPlayer.IsTaunting)
-            {
-                TryDrawWeaponSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint, visibilityAlpha);
-            }
+        if (!GetPlayerIsHeavyEating(_world.LocalPlayer) && !_world.LocalPlayer.IsTaunting)
+        {
+            TryDrawWeaponSprite(_world.LocalPlayer, cameraPosition, playerSpriteTint, visibilityAlpha);
         }
 
         DrawChatBubble(_world.LocalPlayer, cameraPosition);

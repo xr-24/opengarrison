@@ -10,21 +10,46 @@ namespace GG2.Client;
 
 public partial class Game1
 {
+    private bool IsGameplayBindingKey(Keys key)
+    {
+        return _inputBindings.MoveUp == key
+            || _inputBindings.MoveDown == key
+            || _inputBindings.MoveLeft == key
+            || _inputBindings.MoveRight == key
+            || _inputBindings.Taunt == key
+            || _inputBindings.ChangeTeam == key
+            || _inputBindings.ChangeClass == key
+            || _inputBindings.ShowScoreboard == key
+            || _inputBindings.ToggleConsole == key
+            || _inputBindings.DebugKill == key;
+    }
+
+    private bool IsChatShortcutHeld(KeyboardState keyboard)
+    {
+        return keyboard.IsKeyDown(Keys.Enter)
+            || (!IsGameplayBindingKey(Keys.T) && keyboard.IsKeyDown(Keys.T));
+    }
+
+    private bool IsChatShortcutPressed(KeyboardState keyboard)
+    {
+        return IsKeyPressed(keyboard, Keys.Enter)
+            || (!IsGameplayBindingKey(Keys.T) && IsKeyPressed(keyboard, Keys.T));
+    }
+
     private void UpdateGameplayScreenState(KeyboardState keyboard)
     {
         var escapePressed = keyboard.IsKeyDown(Keys.Escape) && !_previousKeyboard.IsKeyDown(Keys.Escape);
         var changeTeamPressed = IsKeyPressed(keyboard, _inputBindings.ChangeTeam);
         var changeClassPressed = IsKeyPressed(keyboard, _inputBindings.ChangeClass);
         if (_chatSubmitAwaitingOpenKeyRelease
-            && !keyboard.IsKeyDown(Keys.Enter)
-            && !keyboard.IsKeyDown(Keys.T))
+            && !IsChatShortcutHeld(keyboard))
         {
             _chatSubmitAwaitingOpenKeyRelease = false;
         }
 
         var openChatPressed = !_chatSubmitAwaitingOpenKeyRelease
             && !IsGameplayMenuOpen()
-            && (IsKeyPressed(keyboard, Keys.Enter) || IsKeyPressed(keyboard, Keys.T));
+            && IsChatShortcutPressed(keyboard);
         var pausePressed = GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || escapePressed;
 
         if (!_passwordPromptOpen && !_consoleOpen && !_teamSelectOpen && !_classSelectOpen && !_chatOpen && openChatPressed)

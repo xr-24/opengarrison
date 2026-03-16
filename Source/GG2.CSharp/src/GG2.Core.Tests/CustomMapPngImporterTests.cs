@@ -70,6 +70,9 @@ public sealed class CustomMapPngImporterTests
             GeneratorBlue
             310
             320
+            teleport_1_point_1
+            330
+            340
             {END ENTITIES}
             """);
 
@@ -91,6 +94,7 @@ public sealed class CustomMapPngImporterTests
         Assert.Contains(room.RoomObjects, marker => marker.SourceName == "ArenaControlPoint" && marker.Type == RoomObjectType.ArenaControlPoint);
         Assert.Contains(room.RoomObjects, marker => marker.SourceName == "GeneratorRed" && marker.Type == RoomObjectType.Generator && marker.Team == PlayerTeam.Red);
         Assert.Contains(room.RoomObjects, marker => marker.SourceName == "GeneratorBlue" && marker.Type == RoomObjectType.Generator && marker.Team == PlayerTeam.Blue);
+        Assert.Equal(["teleport_1_point_1"], room.UnsupportedEntities);
     }
 
     [Fact]

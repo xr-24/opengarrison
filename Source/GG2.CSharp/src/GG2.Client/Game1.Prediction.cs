@@ -150,6 +150,7 @@ public partial class Game1
             IsSpyVisibleToEnemies = player.IsSpyVisibleToEnemies,
             SpyBackstabWindupTicksRemaining = player.SpyBackstabWindupTicksRemaining,
             SpyBackstabRecoveryTicksRemaining = player.SpyBackstabRecoveryTicksRemaining,
+            SpyBackstabVisualTicksRemaining = player.SpyBackstabVisualTicksRemaining,
             MedicUberCharge = player.MedicUberCharge,
             Metal = player.Metal,
             IsMedicUberReady = player.IsMedicUberReady,
@@ -165,7 +166,6 @@ public partial class Game1
 
     private void ApplyPredictedInputStep(PlayerEntity player, PredictedLocalInput predictedInput)
     {
-        player.AdvanceEngineerResources();
         player.Advance(predictedInput.Input, predictedInput.JumpPressed, _world.Level, player.Team, _config.FixedDeltaSeconds);
         ApplyPredictedPrimaryFire(player, predictedInput);
         ApplyPredictedSecondaryFire(player, predictedInput);
@@ -183,6 +183,7 @@ public partial class Game1
         public bool IsSpyVisibleToEnemies;
         public int SpyBackstabWindupTicksRemaining;
         public int SpyBackstabRecoveryTicksRemaining;
+        public int SpyBackstabVisualTicksRemaining;
         public float MedicUberCharge;
         public float Metal;
         public bool IsMedicUberReady;

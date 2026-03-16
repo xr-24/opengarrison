@@ -13,4 +13,6 @@ public sealed record GameMakerRoomMetadata(
     IReadOnlyList<float> AreaBoundaries)
 {
     public IReadOnlyList<AreaTransitionMarker> AreaTransitionMarkers { get; init; } = Array.Empty<AreaTransitionMarker>();
+
+    public IReadOnlyList<string> UnsupportedEntities { get; init; } = Array.Empty<string>();
 }

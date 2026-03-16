@@ -19,7 +19,8 @@ public sealed class SimpleLevel
         float floorY,
         IReadOnlyList<LevelSolid> solids,
         bool importedFromSource,
-        IReadOnlyList<AreaTransitionMarker>? areaTransitionMarkers = null)
+        IReadOnlyList<AreaTransitionMarker>? areaTransitionMarkers = null,
+        IReadOnlyList<string>? unsupportedSourceEntities = null)
     {
         Name = name;
         Mode = mode;
@@ -36,6 +37,7 @@ public sealed class SimpleLevel
         Solids = solids;
         ImportedFromSource = importedFromSource;
         AreaTransitionMarkers = areaTransitionMarkers ?? Array.Empty<AreaTransitionMarker>();
+        UnsupportedSourceEntities = unsupportedSourceEntities ?? Array.Empty<string>();
     }
 
     public string Name { get; }
@@ -67,6 +69,8 @@ public sealed class SimpleLevel
     public bool ImportedFromSource { get; }
 
     public IReadOnlyList<AreaTransitionMarker> AreaTransitionMarkers { get; }
+
+    public IReadOnlyList<string> UnsupportedSourceEntities { get; }
 
     public bool ControlPointSetupGatesActive { get; set; }
 

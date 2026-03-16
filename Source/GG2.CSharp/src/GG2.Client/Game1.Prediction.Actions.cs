@@ -163,12 +163,18 @@ public partial class Game1
             _predictedLocalActionState.IsSpyVisibleToEnemies = false;
             _predictedLocalActionState.SpyBackstabWindupTicksRemaining = 0;
             _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining = 0;
+            _predictedLocalActionState.SpyBackstabVisualTicksRemaining = 0;
             return;
         }
 
         _predictedLocalActionState.SpyCloakAlpha = _predictedLocalActionState.IsSpyCloaked
             ? float.Max(0f, _predictedLocalActionState.SpyCloakAlpha - PlayerEntity.SpyCloakFadePerTick)
             : float.Min(1f, _predictedLocalActionState.SpyCloakAlpha + PlayerEntity.SpyCloakFadePerTick);
+
+        if (_predictedLocalActionState.SpyBackstabVisualTicksRemaining > 0)
+        {
+            _predictedLocalActionState.SpyBackstabVisualTicksRemaining -= 1;
+        }
 
         if (_predictedLocalActionState.SpyBackstabWindupTicksRemaining > 0)
         {
@@ -177,19 +183,15 @@ public partial class Game1
             {
                 _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining = PlayerEntity.SpyBackstabRecoveryTicksDefault;
             }
-
-            return;
         }
-
-        if (_predictedLocalActionState.SpyBackstabRecoveryTicksRemaining > 0)
+        else if (_predictedLocalActionState.SpyBackstabRecoveryTicksRemaining > 0)
         {
             _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining -= 1;
         }
 
         _predictedLocalActionState.IsSpyVisibleToEnemies = _predictedLocalActionState.IsSpyCloaked
             && (_predictedLocalActionState.SpyCloakAlpha > 0f
-                || _predictedLocalActionState.SpyBackstabWindupTicksRemaining > 0
-                || _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining > 0);
+                || _predictedLocalActionState.SpyBackstabVisualTicksRemaining > 0);
     }
 
     private void ApplyPredictedPrimaryFire(PlayerEntity player, PredictedLocalInput predictedInput)
@@ -387,8 +389,7 @@ public partial class Game1
 
     private bool IsPredictedSpyBackstabAnimating()
     {
-        return _predictedLocalActionState.SpyBackstabWindupTicksRemaining > 0
-            || _predictedLocalActionState.SpyBackstabRecoveryTicksRemaining > 0;
+        return _predictedLocalActionState.SpyBackstabVisualTicksRemaining > 0;
     }
 
     private bool IsPredictedSpyBackstabReady()

@@ -262,6 +262,40 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
+    public void RocketSelfBlast_EntersRecoveryStateUntilUpwardMotionEnds()
+    {
+        var world = CreateWorld();
+        SetLocalClassAndRespawn(world, PlayerClass.Soldier);
+        world.TeleportLocalPlayer(30f, world.LocalPlayer.Y);
+
+        world.SetLocalInput(new PlayerInputSnapshot(
+            Left: false,
+            Right: false,
+            Up: false,
+            Down: false,
+            BuildSentry: false,
+            DestroySentry: false,
+            Taunt: false,
+            FirePrimary: true,
+            FireSecondary: false,
+            AimWorldX: -100f,
+            AimWorldY: world.LocalPlayer.Y,
+            DebugKill: false));
+        world.AdvanceOneTick();
+        world.SetLocalInput(default);
+        Assert.True(AdvanceUntilExplosion(world));
+
+        Assert.Equal(LegacyMovementState.ExplosionRecovery, world.LocalPlayer.MovementState);
+
+        for (var tick = 0; tick < 60 && world.LocalPlayer.MovementState != LegacyMovementState.None; tick += 1)
+        {
+            world.AdvanceOneTick();
+        }
+
+        Assert.Equal(LegacyMovementState.None, world.LocalPlayer.MovementState);
+    }
+
+    [Fact]
     public void MineDetonation_EmitsExplosionSoundAndVisual()
     {
         var world = CreateWorld();

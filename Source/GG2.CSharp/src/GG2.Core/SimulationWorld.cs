@@ -303,7 +303,7 @@ public sealed partial class SimulationWorld
 
     public string GetImportSummary()
     {
-        return $"level={Level.Name} imported={Level.ImportedFromSource} bounds={Bounds.Width}x{Bounds.Height} redSpawns={Level.RedSpawns.Count} blueSpawns={Level.BlueSpawns.Count} intelBases={Level.IntelBases.Count} roomObjects={Level.RoomObjects.Count} solids={Level.Solids.Count}";
+        return $"level={Level.Name} imported={Level.ImportedFromSource} bounds={Bounds.Width}x{Bounds.Height} redSpawns={Level.RedSpawns.Count} blueSpawns={Level.BlueSpawns.Count} intelBases={Level.IntelBases.Count} roomObjects={Level.RoomObjects.Count} solids={Level.Solids.Count} unsupported={Level.UnsupportedSourceEntities.Count}";
     }
 
     public string GetEngineerSummary()

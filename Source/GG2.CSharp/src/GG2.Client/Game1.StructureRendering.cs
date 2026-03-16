@@ -11,6 +11,11 @@ public partial class Game1
 {
     private void DrawStabAnimation(StabAnimEntity stabAnimation, Vector2 cameraPosition)
     {
+        if (IsSpyHiddenFromLocalViewer(stabAnimation.OwnerId, stabAnimation.Team, stabAnimation.X))
+        {
+            return;
+        }
+
         var spriteName = stabAnimation.Team == PlayerTeam.Blue ? "BackstabBlueS" : "BackstabRedS";
         var sprite = _runtimeAssets.GetSprite(spriteName);
         if (sprite is null || sprite.Frames.Count == 0)
@@ -32,9 +37,8 @@ public partial class Game1
             return;
         }
 
-        var elapsedTicks = StabAnimEntity.LifetimeTicks - stabAnimation.TicksRemaining;
-        var frameIndex = Math.Clamp(elapsedTicks - StabAnimEntity.WarmupTicks, 0, sprite.Frames.Count - 1);
-        var facingLeft = stabAnimation.DirectionDegrees >= 95f && stabAnimation.DirectionDegrees <= 270f;
+        var frameIndex = Math.Clamp(stabAnimation.FrameIndex, 0, sprite.Frames.Count - 1);
+        var facingLeft = stabAnimation.FacingLeft;
         var spySprite = _runtimeAssets.GetSprite(stabAnimation.Team == PlayerTeam.Blue ? "SpyBlueS" : "SpyRedS");
         var originOffsetX = 0f;
         if (spySprite is not null)

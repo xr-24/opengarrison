@@ -148,8 +148,12 @@ public sealed partial class PlayerEntity
         SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
         IsSpyVisibleToEnemies = false;
+        SpyBackstabHitboxPending = false;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
         ClearChatBubble();
     }
 

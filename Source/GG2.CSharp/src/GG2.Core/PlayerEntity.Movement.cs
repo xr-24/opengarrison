@@ -12,34 +12,38 @@ public sealed partial class PlayerEntity
         HorizontalSpeed = 0f;
         VerticalSpeed = 0f;
         IsGrounded = false;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
     }
 
     public bool Advance(PlayerInputSnapshot input, bool jumpPressed, SimpleLevel level, PlayerTeam team, double deltaSeconds)
     {
         var dt = (float)deltaSeconds;
-        if (IntelPickupCooldownTicks > 0)
-        {
-            IntelPickupCooldownTicks -= 1;
-        }
-
         UpdateAimDirection(input);
-        AdvanceWeaponState();
-        AdvanceHeavyState();
-        AdvanceTauntState();
-        AdvanceSniperState();
-        AdvanceUberState();
-        AdvanceMedicState(input);
-        AdvanceSpyState();
 
         if (!IsAlive)
         {
             return false;
         }
 
-        var moveScale = GetMovementScale(input);
-        var maxRunSpeed = MaxRunSpeed * moveScale;
-        var groundAcceleration = GroundAcceleration * moveScale;
-        var groundDeceleration = GroundDeceleration * moveScale;
+        var legacyStateTicks = ConsumeLegacyStateTicks(dt);
+        for (var tick = 0; tick < legacyStateTicks; tick += 1)
+        {
+            if (IntelPickupCooldownTicks > 0)
+            {
+                IntelPickupCooldownTicks -= 1;
+            }
+
+            AdvanceEngineerResources();
+            AdvanceWeaponState();
+            AdvanceHeavyState();
+            AdvanceTauntState();
+            AdvanceSniperState();
+            AdvanceUberState();
+            AdvanceMedicState();
+            AdvanceSpyState();
+        }
+
         var canMove = !IsHeavyEating && !IsTaunting;
 
         var horizontalDirection = 0f;
@@ -55,21 +59,16 @@ public sealed partial class PlayerEntity
         if (horizontalDirection != 0f)
         {
             FacingDirectionX = horizontalDirection;
-            HorizontalSpeed += horizontalDirection * groundAcceleration * dt;
-            HorizontalSpeed = float.Clamp(HorizontalSpeed, -maxRunSpeed, maxRunSpeed);
         }
-        else
-        {
-            var deceleration = groundDeceleration * dt;
-            if (HorizontalSpeed > 0f)
-            {
-                HorizontalSpeed = float.Max(0f, HorizontalSpeed - deceleration);
-            }
-            else if (HorizontalSpeed < 0f)
-            {
-                HorizontalSpeed = float.Min(0f, HorizontalSpeed + deceleration);
-            }
-        }
+
+        HorizontalSpeed = LegacyMovementModel.AdvanceHorizontalSpeed(
+            HorizontalSpeed,
+            RunPower,
+            GetMovementScale(input),
+            horizontalDirection,
+            MovementState,
+            IsCarryingIntel,
+            dt);
 
         var jumped = false;
         if (canMove && jumpPressed)
@@ -77,7 +76,13 @@ public sealed partial class PlayerEntity
             jumped = TryJump();
         }
 
-        VerticalSpeed += Gravity * dt;
+        var movementState = MovementState;
+        VerticalSpeed = LegacyMovementModel.AdvanceVerticalSpeed(
+            VerticalSpeed,
+            CanOccupy(level, team, X, Y + 1f),
+            dt,
+            ref movementState);
+        MovementState = movementState;
 
         MoveWithCollisions(level, team, HorizontalSpeed * dt, VerticalSpeed * dt);
         ClampTo(level.Bounds);
@@ -102,6 +107,7 @@ public sealed partial class PlayerEntity
 
             Y = clampedY;
             VerticalSpeed = 0f;
+            MovementState = LegacyMovementState.None;
         }
     }
 
@@ -138,6 +144,7 @@ public sealed partial class PlayerEntity
                 }
 
                 VerticalSpeed = 0f;
+                MovementState = LegacyMovementState.None;
                 remainingY = 0f;
                 collisionRectified = true;
             }
@@ -174,7 +181,7 @@ public sealed partial class PlayerEntity
             return 0f;
         }
 
-        if (ClassId == PlayerClass.Spy && IsSpyBackstabAnimating)
+        if (ClassId == PlayerClass.Spy && SpyBackstabVisualTicksRemaining > 0)
         {
             return 0f;
         }
@@ -199,7 +206,7 @@ public sealed partial class PlayerEntity
             return SniperScopedJumpScale;
         }
 
-        if (ClassId == PlayerClass.Spy && IsSpyBackstabAnimating)
+        if (ClassId == PlayerClass.Spy && SpyBackstabVisualTicksRemaining > 0)
         {
             return 0f;
         }
@@ -478,6 +485,7 @@ public sealed partial class PlayerEntity
 
         VerticalSpeed = -jumpSpeed;
         RemainingAirJumps -= 1;
+        MovementState = LegacyMovementState.None;
         return true;
     }
 }

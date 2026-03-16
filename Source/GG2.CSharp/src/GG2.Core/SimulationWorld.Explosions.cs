@@ -62,8 +62,14 @@ public sealed partial class SimulationWorld
             ApplyExplosionImpulse(player, rocket.X, rocket.Y, impulse);
             if (player.Id == rocket.OwnerId && player.Team == rocket.Team)
             {
+                player.SetMovementState(LegacyMovementState.ExplosionRecovery);
                 player.AddImpulse(0f, -4f * distanceFactor * Config.TicksPerSecond);
             }
+            else if (player.Team != rocket.Team)
+            {
+                player.SetMovementState(LegacyMovementState.RocketJuggle);
+            }
+
             if (player.Team != rocket.Team || player.Id == rocket.OwnerId)
             {
                 RegisterBloodEffect(player.X, player.Y, PointDirectionDegrees(rocket.X, rocket.Y, player.X, player.Y) - 180f, 3);
@@ -200,6 +206,12 @@ public sealed partial class SimulationWorld
 
             var factor = 1f - (distance / MineProjectileEntity.BlastRadius);
             ApplyExplosionImpulse(player, mine.X, mine.Y, MineProjectileEntity.BlastImpulse * factor * Config.TicksPerSecond);
+            if (player.Id == mine.OwnerId && player.Team == mine.Team)
+            {
+                player.SetMovementState(LegacyMovementState.ExplosionRecovery);
+                player.ScaleVerticalSpeed(0.8f);
+            }
+
             if (player.Team != mine.Team || player.Id == mine.OwnerId)
             {
                 RegisterBloodEffect(player.X, player.Y, PointDirectionDegrees(mine.X, mine.Y, player.X, player.Y) - 180f, 3);
