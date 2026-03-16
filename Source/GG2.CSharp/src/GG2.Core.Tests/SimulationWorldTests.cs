@@ -235,7 +235,7 @@ public sealed class SimulationWorldTests
     {
         var world = CreateWorld();
         SetLocalClassAndRespawn(world, PlayerClass.Soldier);
-        world.TeleportLocalPlayer(30f, world.LocalPlayer.Y);
+        world.TeleportLocalPlayer(20f, world.LocalPlayer.Y);
 
         world.SetLocalInput(new PlayerInputSnapshot(
             Left: false,
@@ -305,6 +305,48 @@ public sealed class SimulationWorldTests
         var sixtyTickVerticalSpeed = TriggerPointBlankRocketJump(sixtyTickWorld);
 
         Assert.Equal(thirtyTickVerticalSpeed, sixtyTickVerticalSpeed, 3);
+    }
+
+    [Fact]
+    public void RocketSelfBlast_UsesReducedOwnerSplashDamage()
+    {
+        var world = CreateWorld();
+        var floor = new LevelSolid(0f, 500f, 1000f, 40f);
+        var wall = new LevelSolid(46f, 120f, 8f, 220f);
+        world.CombatTestSetLevel(CreateLevel(solids: [floor, wall]));
+        SetLocalClassAndRespawn(world, PlayerClass.Soldier);
+        world.TeleportLocalPlayer(20f, world.LocalPlayer.Y);
+        var healthBeforeExplosion = world.LocalPlayer.Health;
+
+        world.SetLocalInput(new PlayerInputSnapshot(
+            Left: false,
+            Right: false,
+            Up: false,
+            Down: false,
+            BuildSentry: false,
+            DestroySentry: false,
+            Taunt: false,
+            FirePrimary: true,
+            FireSecondary: false,
+            AimWorldX: 200f,
+            AimWorldY: world.LocalPlayer.Y,
+            DebugKill: false));
+        world.AdvanceOneTick();
+        world.SetLocalInput(default);
+
+        var explosion = AdvanceUntilExplosionWithVisual(world);
+
+        Assert.True(explosion.Exploded);
+        var distance = DistanceBetween(
+            explosion.X,
+            explosion.Y,
+            world.LocalPlayer.X,
+            world.LocalPlayer.Y);
+        var fullSplashDamage = RocketProjectileEntity.ExplosionDamage * (1f - (distance / RocketProjectileEntity.BlastRadius));
+        var damageTaken = healthBeforeExplosion - world.LocalPlayer.Health;
+
+        Assert.True(damageTaken > 0);
+        Assert.True(damageTaken < (int)fullSplashDamage);
     }
 
     [Fact]
@@ -1118,5 +1160,34 @@ public sealed class SimulationWorldTests
         }
 
         return false;
+    }
+
+    private static (bool Exploded, float X, float Y) AdvanceUntilExplosionWithVisual(SimulationWorld world, int maxTicks = 60)
+    {
+        for (var tick = 0; tick < maxTicks; tick += 1)
+        {
+            world.AdvanceOneTick();
+            var soundEvents = world.DrainPendingSoundEvents();
+            var visualEvents = world.DrainPendingVisualEvents();
+            if (!soundEvents.Any(soundEvent => soundEvent.SoundName == "ExplosionSnd"))
+            {
+                continue;
+            }
+
+            var visual = visualEvents.FirstOrDefault(visualEvent => visualEvent.EffectName == "Explosion");
+            if (visual is not null)
+            {
+                return (true, visual.X, visual.Y);
+            }
+        }
+
+        return (false, 0f, 0f);
+    }
+
+    private static float DistanceBetween(float x1, float y1, float x2, float y2)
+    {
+        var deltaX = x2 - x1;
+        var deltaY = y2 - y1;
+        return MathF.Sqrt((deltaX * deltaX) + (deltaY * deltaY));
     }
 }

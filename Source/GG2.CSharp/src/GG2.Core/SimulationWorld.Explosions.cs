@@ -63,7 +63,6 @@ public sealed partial class SimulationWorld
             if (player.Id == rocket.OwnerId && player.Team == rocket.Team)
             {
                 player.SetMovementState(LegacyMovementState.ExplosionRecovery);
-                player.AddImpulse(0f, -4f * distanceFactor * LegacyMovementModel.SourceTicksPerSecond);
             }
             else if (player.Team != rocket.Team)
             {
@@ -72,8 +71,11 @@ public sealed partial class SimulationWorld
 
             if (player.Team != rocket.Team || player.Id == rocket.OwnerId)
             {
+                var appliedDamage = player.Id == rocket.OwnerId && player.Team == rocket.Team
+                    ? damage * (2f / 3f)
+                    : damage;
                 RegisterBloodEffect(player.X, player.Y, PointDirectionDegrees(rocket.X, rocket.Y, player.X, player.Y) - 180f, 3);
-                if (player.ApplyContinuousDamage(damage, PlayerEntity.SpyDamageRevealAlpha))
+                if (player.ApplyContinuousDamage(appliedDamage, PlayerEntity.SpyDamageRevealAlpha))
                 {
                     KillPlayer(player, gibbed: true, killer: FindPlayerById(rocket.OwnerId), weaponSpriteName: "RocketlauncherS");
                 }
