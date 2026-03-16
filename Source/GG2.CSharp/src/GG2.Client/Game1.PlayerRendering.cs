@@ -264,7 +264,7 @@ public partial class Game1
             return Math.Clamp(teamFrame + 2, 0, frameCount - 1);
         }
 
-        var flashOffset = _playerWeaponFlashTicks.GetValueOrDefault(GetPlayerStateKey(player), 0) > 0 ? 2 : 0;
+        var flashOffset = _playerWeaponFlashTimes.GetValueOrDefault(GetPlayerStateKey(player), 0f) > 0f ? 2 : 0;
         return Math.Clamp(teamFrame + flashOffset, 0, frameCount - 1);
     }
 

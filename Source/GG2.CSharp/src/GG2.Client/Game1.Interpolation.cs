@@ -36,6 +36,8 @@ public partial class Game1
     private readonly Dictionary<int, List<EntitySnapshotSample>> _entitySnapshotHistories = new();
     private readonly Dictionary<PlayerTeam, List<EntitySnapshotSample>> _intelSnapshotHistories = new();
     private readonly Dictionary<int, List<PlayerSnapshotSample>> _remotePlayerSnapshotHistories = new();
+    private readonly HashSet<int> _activeInterpolatedEntityIds = new();
+    private readonly List<int> _staleInterpolatedEntityIds = new();
     private readonly Dictionary<ulong, SnapshotMessage> _snapshotStatesByFrame = new();
     private readonly Queue<ulong> _snapshotStateFrameOrder = new();
     private readonly Queue<SnapshotMessage> _queuedAuthoritativeSnapshots = new();

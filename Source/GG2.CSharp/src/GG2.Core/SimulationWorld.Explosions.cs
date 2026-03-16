@@ -57,13 +57,13 @@ public sealed partial class SimulationWorld
 
             var distanceFactor = 1f - (distance / RocketProjectileEntity.BlastRadius);
             var damage = RocketProjectileEntity.ExplosionDamage * distanceFactor;
-            var impulse = RocketProjectileEntity.Knockback * distanceFactor * Config.TicksPerSecond;
+            var impulse = RocketProjectileEntity.Knockback * distanceFactor * LegacyMovementModel.SourceTicksPerSecond;
 
             ApplyExplosionImpulse(player, rocket.X, rocket.Y, impulse);
             if (player.Id == rocket.OwnerId && player.Team == rocket.Team)
             {
                 player.SetMovementState(LegacyMovementState.ExplosionRecovery);
-                player.AddImpulse(0f, -4f * distanceFactor * Config.TicksPerSecond);
+                player.AddImpulse(0f, -4f * distanceFactor * LegacyMovementModel.SourceTicksPerSecond);
             }
             else if (player.Team != rocket.Team)
             {
@@ -205,7 +205,7 @@ public sealed partial class SimulationWorld
             }
 
             var factor = 1f - (distance / MineProjectileEntity.BlastRadius);
-            ApplyExplosionImpulse(player, mine.X, mine.Y, MineProjectileEntity.BlastImpulse * factor * Config.TicksPerSecond);
+            ApplyExplosionImpulse(player, mine.X, mine.Y, MineProjectileEntity.BlastImpulse * factor * LegacyMovementModel.SourceTicksPerSecond);
             if (player.Id == mine.OwnerId && player.Team == mine.Team)
             {
                 player.SetMovementState(LegacyMovementState.ExplosionRecovery);

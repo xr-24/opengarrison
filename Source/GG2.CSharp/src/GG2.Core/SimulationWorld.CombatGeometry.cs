@@ -55,6 +55,36 @@ public sealed partial class SimulationWorld
             return distance;
         }
 
+        private static RectangleHitbox GetRayBounds(
+            float originX,
+            float originY,
+            float directionX,
+            float directionY,
+            float maxDistance,
+            float padding = 0f)
+        {
+            var endX = originX + (directionX * maxDistance);
+            var endY = originY + (directionY * maxDistance);
+            return new RectangleHitbox(
+                MathF.Min(originX, endX) - padding,
+                MathF.Min(originY, endY) - padding,
+                MathF.Max(originX, endX) + padding,
+                MathF.Max(originY, endY) + padding);
+        }
+
+        private static bool RayBoundsMayIntersectRectangle(
+            RectangleHitbox rayBounds,
+            float left,
+            float top,
+            float right,
+            float bottom)
+        {
+            return rayBounds.Left <= right
+                && rayBounds.Right >= left
+                && rayBounds.Top <= bottom
+                && rayBounds.Bottom >= top;
+        }
+
         private static float? GetThickRayIntersectionDistanceWithRectangle(
             float originX,
             float originY,

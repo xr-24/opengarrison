@@ -456,7 +456,6 @@ public partial class Game1
             (ControlsMenuBinding.ChangeClass, "Change Class:", _inputBindings.ChangeClass),
             (ControlsMenuBinding.ShowScoreboard, "Show Scores:", _inputBindings.ShowScoreboard),
             (ControlsMenuBinding.ToggleConsole, "Console:", _inputBindings.ToggleConsole),
-            (ControlsMenuBinding.DebugKill, "Debug Kill:", _inputBindings.DebugKill),
         ];
     }
 
@@ -491,9 +490,6 @@ public partial class Game1
             case ControlsMenuBinding.ToggleConsole:
                 _inputBindings.ToggleConsole = key;
                 break;
-            case ControlsMenuBinding.DebugKill:
-                _inputBindings.DebugKill = key;
-                break;
         }
     }
 
@@ -510,7 +506,6 @@ public partial class Game1
             ControlsMenuBinding.ChangeClass => "Change Class",
             ControlsMenuBinding.ShowScoreboard => "Show Scores",
             ControlsMenuBinding.ToggleConsole => "Console",
-            ControlsMenuBinding.DebugKill => "Debug Kill",
             _ => "Binding",
         };
     }

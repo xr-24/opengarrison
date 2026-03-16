@@ -145,13 +145,15 @@ public partial class Game1
                 }
             }
         }
+
+        AdvanceBackstabVisuals();
     }
 
     private float GetLegacyUiStepCount()
     {
         return _clientUpdateElapsedSeconds <= 0f
             ? 0f
-            : _clientUpdateElapsedSeconds / (float)_config.FixedDeltaSeconds;
+            : _clientUpdateElapsedSeconds * LegacyMovementModel.SourceTicksPerSecond;
     }
 
     private float AdvanceOpeningAlpha(float alpha, float minAlpha, float maxAlpha)

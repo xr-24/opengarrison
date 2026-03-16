@@ -134,6 +134,7 @@ public partial class Game1
             _lastRemotePlayerRenderTimeClockSeconds = -1d;
             _hasRemotePlayerRenderTime = false;
             _pendingNetworkVisualEvents.Clear();
+            ResetBackstabVisuals();
             _hasPredictedLocalPlayerPosition = false;
             _hasSmoothedLocalPlayerRenderPosition = false;
             _predictedLocalPlayerRenderCorrectionOffset = Vector2.Zero;

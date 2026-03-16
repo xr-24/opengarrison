@@ -5,8 +5,8 @@ public sealed class RocketProjectileEntity : SimulationEntity
     public const int LifetimeTicks = 200;
     public const int DirectHitDamage = 25;
     public const float ExplosionDamage = 30f;
-    public const float BlastRadius = 84f;
-    public const float Knockback = 10f;
+    public const float BlastRadius = 65f;
+    public const float Knockback = 8f;
 
     public RocketProjectileEntity(
         int id,

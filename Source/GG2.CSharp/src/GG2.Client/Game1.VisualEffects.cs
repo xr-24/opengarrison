@@ -13,12 +13,14 @@ public partial class Game1
 {
     private readonly List<ExplosionVisual> _explosions = new();
     private readonly List<AirBlastVisual> _airBlasts = new();
+    private readonly List<BackstabVisual> _backstabVisuals = new();
     private readonly List<BloodVisual> _bloodVisuals = new();
     private readonly List<RocketSmokeVisual> _rocketSmokeVisuals = new();
     private readonly List<FlameSmokeVisual> _flameSmokeVisuals = new();
     private readonly List<SnapshotVisualEvent> _pendingNetworkVisualEvents = new();
     private readonly HashSet<ulong> _processedNetworkVisualEventIds = new();
     private readonly Queue<ulong> _processedNetworkVisualEventOrder = new();
+    private int _nextClientBackstabVisualId = -1;
 
     private void AdvanceExplosionVisuals()
     {
@@ -56,6 +58,52 @@ public partial class Game1
             {
                 _bloodVisuals.RemoveAt(index);
             }
+        }
+    }
+
+    private void AdvanceBackstabVisuals()
+    {
+        if (_backstabVisuals.Count == 0)
+        {
+            return;
+        }
+
+        var sourceTickAdvance = _clientUpdateElapsedSeconds * LegacyMovementModel.SourceTicksPerSecond;
+        if (sourceTickAdvance <= 0f)
+        {
+            return;
+        }
+
+        for (var index = _backstabVisuals.Count - 1; index >= 0; index -= 1)
+        {
+            var visual = _backstabVisuals[index];
+            visual.PendingSourceTicks += sourceTickAdvance;
+            while (visual.PendingSourceTicks >= 1f && !visual.Animation.IsExpired)
+            {
+                visual.PendingSourceTicks -= 1f;
+                var ownerX = visual.Animation.X;
+                var ownerY = visual.Animation.Y;
+                if (TryGetBackstabOwnerPosition(visual.Animation.OwnerId, out var ownerPosition))
+                {
+                    ownerX = ownerPosition.X;
+                    ownerY = ownerPosition.Y;
+                }
+
+                visual.Animation.AdvanceOneTick(ownerX, ownerY);
+            }
+
+            if (visual.Animation.IsExpired)
+            {
+                _backstabVisuals.RemoveAt(index);
+            }
+        }
+    }
+
+    private void DrawBackstabVisuals(Vector2 cameraPosition)
+    {
+        for (var index = 0; index < _backstabVisuals.Count; index += 1)
+        {
+            DrawStabAnimation(_backstabVisuals[index].Animation, cameraPosition);
         }
     }
 
@@ -273,6 +321,18 @@ public partial class Game1
             return;
         }
 
+        if (string.Equals(effectName, "BackstabBlue", StringComparison.OrdinalIgnoreCase))
+        {
+            SpawnBackstabVisual(ownerId: count, PlayerTeam.Blue, x, y, directionDegrees);
+            return;
+        }
+
+        if (string.Equals(effectName, "BackstabRed", StringComparison.OrdinalIgnoreCase))
+        {
+            SpawnBackstabVisual(ownerId: count, PlayerTeam.Red, x, y, directionDegrees);
+            return;
+        }
+
         if (!string.Equals(effectName, "Blood", StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -295,6 +355,92 @@ public partial class Game1
         }
     }
 
+    private void SpawnBackstabVisual(int ownerId, PlayerTeam team, float x, float y, float directionDegrees)
+    {
+        var normalizedDirection = NormalizeDirectionDegrees(directionDegrees);
+        for (var index = 0; index < _backstabVisuals.Count; index += 1)
+        {
+            var animation = _backstabVisuals[index].Animation;
+            if (ownerId != 0 && animation.OwnerId == ownerId)
+            {
+                return;
+            }
+
+            if (animation.Team != team)
+            {
+                continue;
+            }
+
+            if (DistanceSquared(animation.X, animation.Y, x, y) > 16f)
+            {
+                continue;
+            }
+
+            if (GetAngleDifferenceDegrees(animation.DirectionDegrees, normalizedDirection) > 8f)
+            {
+                continue;
+            }
+
+            return;
+        }
+
+        _backstabVisuals.Add(new BackstabVisual(
+            new StabAnimEntity(_nextClientBackstabVisualId--, ownerId, team, x, y, normalizedDirection)));
+    }
+
+    private bool TryGetBackstabOwnerPosition(int ownerId, out Vector2 ownerPosition)
+    {
+        if (ownerId == 0)
+        {
+            ownerPosition = default;
+            return false;
+        }
+
+        var owner = FindPlayerById(ownerId);
+        if (owner is null || !owner.IsAlive)
+        {
+            ownerPosition = default;
+            return false;
+        }
+
+        ownerPosition = GetRenderPosition(owner, allowInterpolation: !ReferenceEquals(owner, _world.LocalPlayer));
+        return true;
+    }
+
+    private void ResetBackstabVisuals()
+    {
+        _backstabVisuals.Clear();
+        _nextClientBackstabVisualId = -1;
+    }
+
+    private static float NormalizeDirectionDegrees(float directionDegrees)
+    {
+        while (directionDegrees < 0f)
+        {
+            directionDegrees += 360f;
+        }
+
+        while (directionDegrees >= 360f)
+        {
+            directionDegrees -= 360f;
+        }
+
+        return directionDegrees;
+    }
+
+    private static float GetAngleDifferenceDegrees(float left, float right)
+    {
+        var difference = MathF.Abs(NormalizeDirectionDegrees(left) - NormalizeDirectionDegrees(right));
+        return MathF.Min(difference, 360f - difference);
+    }
+
+    private static float DistanceSquared(float x1, float y1, float x2, float y2)
+    {
+        var deltaX = x2 - x1;
+        var deltaY = y2 - y1;
+        return (deltaX * deltaX) + (deltaY * deltaY);
+    }
+
     private sealed class ExplosionVisual
     {
         public const int LifetimeTicks = 13;
@@ -311,6 +457,18 @@ public partial class Game1
         public float Y { get; }
 
         public int TicksRemaining { get; set; }
+    }
+
+    private sealed class BackstabVisual
+    {
+        public BackstabVisual(StabAnimEntity animation)
+        {
+            Animation = animation;
+        }
+
+        public StabAnimEntity Animation { get; }
+
+        public float PendingSourceTicks { get; set; }
     }
 
     private sealed class AirBlastVisual

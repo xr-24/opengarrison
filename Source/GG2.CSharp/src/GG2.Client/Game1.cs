@@ -72,7 +72,6 @@ public partial class Game1 : Game
         ChangeClass,
         ShowScoreboard,
         ToggleConsole,
-        DebugKill,
     }
 
     private const int ProcessedNetworkEventHistoryLimit = 4096;
@@ -90,7 +89,7 @@ public partial class Game1 : Game
     private GameMakerRuntimeAssetCache _runtimeAssets = null!;
     private KeyboardState _previousKeyboard;
     private readonly Dictionary<int, float> _playerAnimationImages = new();
-    private readonly Dictionary<int, int> _playerWeaponFlashTicks = new();
+    private readonly Dictionary<int, float> _playerWeaponFlashTimes = new();
     private readonly Dictionary<int, int> _playerPreviousAmmoCounts = new();
     private readonly Dictionary<int, int> _playerPreviousCooldownTicks = new();
     private readonly Dictionary<int, Vector2> _playerPreviousRenderPositions = new();
