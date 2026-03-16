@@ -71,7 +71,11 @@ chmod +x "`$SCRIPT_DIR/$ExecutableName"
 exec "`$SCRIPT_DIR/$ExecutableName" "`$@"
 "@
 
-    Set-Content -Path $Path -Value $scriptContents -NoNewline
+    $scriptContents = $scriptContents -replace "`r`n", "`n"
+    [System.IO.File]::WriteAllText(
+        $Path,
+        $scriptContents,
+        [System.Text.UTF8Encoding]::new($false))
 }
 
 function Copy-MinimalModernAssets {
