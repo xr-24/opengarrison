@@ -12,7 +12,7 @@ public sealed partial class PlayerEntity
 
         IsTaunting = true;
         TauntFrameIndex = Team == PlayerTeam.Blue
-            ? GetTauntLengthFrames(ClassId) + 1f
+            ? ClassDefinition.TauntLengthFrames + 1f
             : 0f;
         return true;
     }
@@ -39,8 +39,8 @@ public sealed partial class PlayerEntity
 
         TauntFrameIndex += TauntFrameStepPerTick;
         var tauntEndFrame = Team == PlayerTeam.Blue
-            ? (GetTauntLengthFrames(ClassId) * 2f) + 1f
-            : GetTauntLengthFrames(ClassId);
+            ? (ClassDefinition.TauntLengthFrames * 2f) + 1f
+            : ClassDefinition.TauntLengthFrames;
         if (TauntFrameIndex < tauntEndFrame)
         {
             return;
@@ -131,20 +131,22 @@ public sealed partial class PlayerEntity
         SpyBackstabDirectionDegrees = directionDegrees;
         SpyBackstabWindupTicksRemaining = SpyBackstabWindupTicksDefault;
         SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = SpyBackstabVisualTicksDefault;
+        SpyBackstabHitboxPending = false;
         IsSpyVisibleToEnemies = true;
         return true;
     }
 
     public bool TryConsumeSpyBackstabHitboxTrigger(out float directionDegrees)
     {
-        if (SpyBackstabWindupTicksRemaining != 0 || SpyBackstabRecoveryTicksRemaining != SpyBackstabRecoveryTicksDefault)
+        if (!SpyBackstabHitboxPending)
         {
             directionDegrees = 0f;
             return false;
         }
 
         directionDegrees = SpyBackstabDirectionDegrees;
-        SpyBackstabRecoveryTicksRemaining -= 1;
+        SpyBackstabHitboxPending = false;
         return true;
     }
 
@@ -269,6 +271,8 @@ public sealed partial class PlayerEntity
             IsSpyVisibleToEnemies = false;
             SpyBackstabWindupTicksRemaining = 0;
             SpyBackstabRecoveryTicksRemaining = 0;
+            SpyBackstabVisualTicksRemaining = 0;
+            SpyBackstabHitboxPending = false;
             return;
         }
 
@@ -276,24 +280,27 @@ public sealed partial class PlayerEntity
             ? float.Max(0f, SpyCloakAlpha - SpyCloakFadePerTick)
             : float.Min(1f, SpyCloakAlpha + SpyCloakFadePerTick);
 
+        if (SpyBackstabVisualTicksRemaining > 0)
+        {
+            SpyBackstabVisualTicksRemaining -= 1;
+        }
+
         if (SpyBackstabWindupTicksRemaining > 0)
         {
             SpyBackstabWindupTicksRemaining -= 1;
             if (SpyBackstabWindupTicksRemaining == 0)
             {
                 SpyBackstabRecoveryTicksRemaining = SpyBackstabRecoveryTicksDefault;
+                SpyBackstabHitboxPending = true;
             }
-
-            return;
         }
-
-        if (SpyBackstabRecoveryTicksRemaining > 0)
+        else if (SpyBackstabRecoveryTicksRemaining > 0)
         {
             SpyBackstabRecoveryTicksRemaining -= 1;
         }
 
         IsSpyVisibleToEnemies = IsSpyCloaked
-            && (SpyCloakAlpha > 0f || SpyBackstabWindupTicksRemaining > 0 || SpyBackstabRecoveryTicksRemaining > 0);
+            && (SpyCloakAlpha > 0f || SpyBackstabVisualTicksRemaining > 0);
     }
 
     private void AdvancePyroAirblastState()
@@ -318,7 +325,7 @@ public sealed partial class PlayerEntity
         }
     }
 
-    private void AdvanceMedicState(PlayerInputSnapshot input)
+    private void AdvanceMedicState()
     {
         if (ClassId != PlayerClass.Medic)
         {
@@ -346,7 +353,7 @@ public sealed partial class PlayerEntity
             return;
         }
 
-        if (MedicNeedleCooldownTicks > 0)
+        if (MedicNeedleCooldownTicks > 0 || IsMedicHealing || IsMedicUbering)
         {
             MedicNeedleRefillTicks = 0;
             return;
@@ -361,26 +368,8 @@ public sealed partial class PlayerEntity
         MedicNeedleRefillTicks -= 1;
         if (MedicNeedleRefillTicks <= 0)
         {
-            CurrentShells = int.Min(MaxShells, CurrentShells + 1);
-            MedicNeedleRefillTicks = CurrentShells < MaxShells ? MedicNeedleRefillTicksDefault : 0;
+            CurrentShells = MaxShells;
+            MedicNeedleRefillTicks = 0;
         }
-    }
-
-    private static int GetTauntLengthFrames(PlayerClass classId)
-    {
-        return classId switch
-        {
-            PlayerClass.Scout => 8,
-            PlayerClass.Engineer => 12,
-            PlayerClass.Pyro => 9,
-            PlayerClass.Soldier => 15,
-            PlayerClass.Demoman => 10,
-            PlayerClass.Heavy => 11,
-            PlayerClass.Sniper => 12,
-            PlayerClass.Medic => 10,
-            PlayerClass.Spy => 10,
-            PlayerClass.Quote => 16,
-            _ => 0,
-        };
     }
 }

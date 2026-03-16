@@ -118,7 +118,8 @@ public static class SimpleLevelFactory
             floorY: floorY,
             solids: solids,
             importedFromSource: true,
-            areaTransitionMarkers: importedRoom.AreaTransitionMarkers);
+            areaTransitionMarkers: importedRoom.AreaTransitionMarkers,
+            unsupportedSourceEntities: importedRoom.UnsupportedEntities);
     }
 
     public static IReadOnlyList<LevelCatalogEntry> GetAvailableSourceLevels()

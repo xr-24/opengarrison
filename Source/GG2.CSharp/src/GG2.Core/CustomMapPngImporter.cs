@@ -254,6 +254,7 @@ public static class CustomMapPngImporter
         var intelBases = new List<IntelBaseMarker>();
         var roomObjects = new List<RoomObjectMarker>();
         var areaTransitionMarkers = new List<AreaTransitionMarker>();
+        var unsupportedEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lines = entitiesSection
             .Replace("\r", string.Empty, StringComparison.Ordinal)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -292,6 +293,10 @@ public static class CustomMapPngImporter
                     {
                         roomObjects.Add(marker);
                     }
+                    else
+                    {
+                        unsupportedEntities.Add(entityType);
+                    }
                     break;
             }
         }
@@ -307,6 +312,9 @@ public static class CustomMapPngImporter
             AreaTransitionMetadata.BuildAreaBoundaries(areaTransitionMarkers))
         {
             AreaTransitionMarkers = areaTransitionMarkers.ToArray(),
+            UnsupportedEntities = unsupportedEntities
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
         };
     }
 

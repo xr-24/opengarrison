@@ -24,6 +24,7 @@ public sealed partial class PlayerEntity : SimulationEntity
     public const int MedicNeedleFireCooldownTicks = 3;
     public const int SpyBackstabWindupTicksDefault = 32;
     public const int SpyBackstabRecoveryTicksDefault = 18;
+    public const int SpyBackstabVisualTicksDefault = 60;
     public const float SpyCloakFadePerTick = 0.05f;
     public const float SpyCloakToggleThreshold = 0.5f;
     public const float SpyMinAllyCloakAlpha = 0.5f;
@@ -153,11 +154,13 @@ public sealed partial class PlayerEntity : SimulationEntity
 
     public bool IsSpyBackstabReady => SpyBackstabWindupTicksRemaining <= 0 && SpyBackstabRecoveryTicksRemaining <= 0;
 
-    public bool IsSpyBackstabAnimating => SpyBackstabWindupTicksRemaining > 0 || SpyBackstabRecoveryTicksRemaining > 0;
+    public bool IsSpyBackstabAnimating => SpyBackstabVisualTicksRemaining > 0;
 
     public int SpyBackstabWindupTicksRemaining { get; private set; }
 
     public int SpyBackstabRecoveryTicksRemaining { get; private set; }
+
+    public int SpyBackstabVisualTicksRemaining { get; private set; }
 
     public float SpyBackstabDirectionDegrees { get; private set; }
 
@@ -182,6 +185,16 @@ public sealed partial class PlayerEntity : SimulationEntity
     public bool IsChatBubbleFading { get; private set; }
 
     public int ChatBubbleTicksRemaining { get; private set; }
+
+    private bool SpyBackstabHitboxPending { get; set; }
+
+    private float LegacyStateTickAccumulator { get; set; }
+
+    public LegacyMovementState MovementState { get; private set; }
+
+    public float RunPower => ClassDefinition.RunPower;
+
+    public float JumpStrength => ClassDefinition.JumpStrength;
 
     public float MaxRunSpeed => ClassDefinition.MaxRunSpeed;
 
@@ -244,8 +257,12 @@ public sealed partial class PlayerEntity : SimulationEntity
         SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
         IsSpyVisibleToEnemies = false;
+        SpyBackstabHitboxPending = false;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
         ClearChatBubble();
     }
 
@@ -279,8 +296,12 @@ public sealed partial class PlayerEntity : SimulationEntity
         SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
         IsSpyVisibleToEnemies = false;
+        SpyBackstabHitboxPending = false;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
         ClearChatBubble();
     }
 
@@ -315,14 +336,45 @@ public sealed partial class PlayerEntity : SimulationEntity
         SpyCloakAlpha = 1f;
         SpyBackstabWindupTicksRemaining = 0;
         SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = 0;
         SpyBackstabDirectionDegrees = 0f;
         IsSpyVisibleToEnemies = false;
+        SpyBackstabHitboxPending = false;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
         ClearChatBubble();
     }
 
     public void SetSpawnRoomState(bool isInSpawnRoom)
     {
         IsInSpawnRoom = isInSpawnRoom;
+    }
+
+    private int ConsumeLegacyStateTicks(float deltaSeconds)
+    {
+        if (deltaSeconds <= 0f)
+        {
+            return 0;
+        }
+
+        LegacyStateTickAccumulator += deltaSeconds * LegacyMovementModel.SourceTicksPerSecond;
+        var ticks = (int)LegacyStateTickAccumulator;
+        if (ticks > 0)
+        {
+            LegacyStateTickAccumulator -= ticks;
+        }
+
+        return ticks;
+    }
+
+    public void SetMovementState(LegacyMovementState movementState)
+    {
+        MovementState = movementState;
+    }
+
+    public void ScaleVerticalSpeed(float scale)
+    {
+        VerticalSpeed *= scale;
     }
 
     internal bool CanOccupy(SimpleLevel level, PlayerTeam team, float x, float y)

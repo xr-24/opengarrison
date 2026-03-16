@@ -7,9 +7,12 @@ public sealed record CharacterClassDefinition(
     int MaxHealth,
     float Width,
     float Height,
+    float RunPower,
+    float JumpStrength,
     float MaxRunSpeed,
     float GroundAcceleration,
     float GroundDeceleration,
     float Gravity,
     float JumpSpeed,
-    int MaxAirJumps);
+    int MaxAirJumps,
+    int TauntLengthFrames);

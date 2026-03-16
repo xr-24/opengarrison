@@ -50,7 +50,6 @@ public sealed partial class SimulationWorld
         var killPressed = input.DebugKill && !previousInput.DebugKill;
         var secondaryPressed = input.FireSecondary && !previousInput.FireSecondary;
 
-        player.AdvanceEngineerResources();
         if (tauntPressed)
         {
             player.TryStartTaunt();

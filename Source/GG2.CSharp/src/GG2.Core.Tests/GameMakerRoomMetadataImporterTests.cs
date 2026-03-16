@@ -45,6 +45,10 @@ public sealed class GameMakerRoomMetadataImporterTests : IDisposable
       <object>NextAreaO</object>
       <position x="0" y="700" />
     </instance>
+    <instance>
+      <object>TotallyUnknownObject</object>
+      <position x="0" y="900" />
+    </instance>
   </instances>
 </room>
 """);
@@ -70,6 +74,7 @@ public sealed class GameMakerRoomMetadataImporterTests : IDisposable
                 Assert.Equal(AreaTransitionDirection.Next, marker.Direction);
                 Assert.Equal(700f, marker.Y);
             });
+        Assert.Equal(["TotallyUnknownObject"], imported.UnsupportedEntities);
     }
 
     public void Dispose()

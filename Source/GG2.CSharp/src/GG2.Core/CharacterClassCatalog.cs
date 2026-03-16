@@ -2,6 +2,9 @@ namespace GG2.Core;
 
 public static class CharacterClassCatalog
 {
+    private const float LegacyWidth = 24f;
+    private const float LegacyHeight = 36f;
+
     public static PrimaryWeaponDefinition Scattergun { get; } = new(
         DisplayName: "Scattergun",
         Kind: PrimaryWeaponKind.PelletGun,
@@ -131,156 +134,105 @@ public static class CharacterClassCatalog
         AutoReloads: false,
         AmmoRegenPerTick: 1);
 
-    // These values currently mirror the first translated Scout-style movement slice.
-    public static CharacterClassDefinition Scout { get; } = new(
-        Id: PlayerClass.Scout,
-        DisplayName: "Scout",
-        PrimaryWeapon: Scattergun,
-        MaxHealth: 100,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 252f,
-        GroundAcceleration: 765f,
-        GroundDeceleration: 1100f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 1);
+    public static CharacterClassDefinition Scout { get; } = CreateDefinition(
+        PlayerClass.Scout,
+        "Scout",
+        Scattergun,
+        maxHealth: 100,
+        runPower: 1.4f,
+        jumpStrength: 8f,
+        maxAirJumps: 1,
+        tauntLengthFrames: 8);
 
-    // Engineer values are grounded in the original GG2 create event and pygg2's max-speed sanity check.
-    public static CharacterClassDefinition Engineer { get; } = new(
-        Id: PlayerClass.Engineer,
-        DisplayName: "Engineer",
-        PrimaryWeapon: Shotgun,
-        MaxHealth: 120,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 180f,
-        GroundAcceleration: 546f,
-        GroundDeceleration: 786f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Engineer { get; } = CreateDefinition(
+        PlayerClass.Engineer,
+        "Engineer",
+        Shotgun,
+        maxHealth: 120,
+        runPower: 1f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 12);
 
-    // Pyro values come from the original GG2 create event with pygg2 used only as a max-speed sanity check.
-    public static CharacterClassDefinition Pyro { get; } = new(
-        Id: PlayerClass.Pyro,
-        DisplayName: "Pyro",
-        PrimaryWeapon: Flamethrower,
-        MaxHealth: 120,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 198f,
-        GroundAcceleration: 600f,
-        GroundDeceleration: 860f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Pyro { get; } = CreateDefinition(
+        PlayerClass.Pyro,
+        "Pyro",
+        Flamethrower,
+        maxHealth: 120,
+        runPower: 1.1f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 9);
 
-    public static CharacterClassDefinition Soldier { get; } = new(
-        Id: PlayerClass.Soldier,
-        DisplayName: "Soldier",
-        PrimaryWeapon: RocketLauncher,
-        MaxHealth: 175,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 162f,
-        GroundAcceleration: 492f,
-        GroundDeceleration: 708f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Soldier { get; } = CreateDefinition(
+        PlayerClass.Soldier,
+        "Soldier",
+        RocketLauncher,
+        maxHealth: 175,
+        runPower: 0.9f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 15);
 
-    public static CharacterClassDefinition Demoman { get; } = new(
-        Id: PlayerClass.Demoman,
-        DisplayName: "Demoman",
-        PrimaryWeapon: MineLauncher,
-        MaxHealth: 120,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 180f,
-        GroundAcceleration: 546f,
-        GroundDeceleration: 786f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Demoman { get; } = CreateDefinition(
+        PlayerClass.Demoman,
+        "Demoman",
+        MineLauncher,
+        maxHealth: 120,
+        runPower: 1f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 10);
 
-    // Heavy values come directly from the original GG2 create event:
-    // runPower=0.8, jumpStrength=8, maxHp=200, weapons[0]=Minigun.
-    public static CharacterClassDefinition Heavy { get; } = new(
-        Id: PlayerClass.Heavy,
-        DisplayName: "Heavy",
-        PrimaryWeapon: Minigun,
-        MaxHealth: 200,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 144f,
-        GroundAcceleration: 436.8f,
-        GroundDeceleration: 628.8f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Heavy { get; } = CreateDefinition(
+        PlayerClass.Heavy,
+        "Heavy",
+        Minigun,
+        maxHealth: 200,
+        runPower: 0.8f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 11);
 
-    // Sniper values come directly from the original GG2 create event:
-    // runPower=0.9, jumpStrength=8, maxHp=120, weapons[0]=Rifle.
-    public static CharacterClassDefinition Sniper { get; } = new(
-        Id: PlayerClass.Sniper,
-        DisplayName: "Sniper",
-        PrimaryWeapon: Rifle,
-        MaxHealth: 120,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 162f,
-        GroundAcceleration: 492f,
-        GroundDeceleration: 708f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Sniper { get; } = CreateDefinition(
+        PlayerClass.Sniper,
+        "Sniper",
+        Rifle,
+        maxHealth: 120,
+        runPower: 0.9f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 12);
 
-    // Medic values come directly from the original GG2 create event:
-    // runPower=1.09, jumpStrength=8, maxHp=120, weapons[0]=Medigun.
-    public static CharacterClassDefinition Medic { get; } = new(
-        Id: PlayerClass.Medic,
-        DisplayName: "Medic",
-        PrimaryWeapon: Medigun,
-        MaxHealth: 120,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 196.2f,
-        GroundAcceleration: 595.14f,
-        GroundDeceleration: 856.74f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Medic { get; } = CreateDefinition(
+        PlayerClass.Medic,
+        "Medic",
+        Medigun,
+        maxHealth: 120,
+        runPower: 1.09f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 10);
 
-    // Spy values come directly from the original GG2 create event:
-    // runPower=1.08, jumpStrength=8, maxHp=100, weapons[0]=Revolver, canCloak=1.
-    public static CharacterClassDefinition Spy { get; } = new(
-        Id: PlayerClass.Spy,
-        DisplayName: "Spy",
-        PrimaryWeapon: Revolver,
-        MaxHealth: 100,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 194.4f,
-        GroundAcceleration: 589.68f,
-        GroundDeceleration: 849.42f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Spy { get; } = CreateDefinition(
+        PlayerClass.Spy,
+        "Spy",
+        Revolver,
+        maxHealth: 100,
+        runPower: 1.08f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 10);
 
-    public static CharacterClassDefinition Quote { get; } = new(
-        Id: PlayerClass.Quote,
-        DisplayName: "Quote",
-        PrimaryWeapon: Blade,
-        MaxHealth: 140,
-        Width: 24f,
-        Height: 36f,
-        MaxRunSpeed: 192.6f,
-        GroundAcceleration: 585.54f,
-        GroundDeceleration: 843.18f,
-        Gravity: 700f,
-        JumpSpeed: 300f,
-        MaxAirJumps: 0);
+    public static CharacterClassDefinition Quote { get; } = CreateDefinition(
+        PlayerClass.Quote,
+        "Quote",
+        Blade,
+        maxHealth: 140,
+        runPower: 1.07f,
+        jumpStrength: 8f,
+        maxAirJumps: 0,
+        tauntLengthFrames: 16);
 
     public static CharacterClassDefinition GetDefinition(PlayerClass playerClass)
     {
@@ -297,5 +249,33 @@ public static class CharacterClassCatalog
             PlayerClass.Quote => Quote,
             _ => Scout,
         };
+    }
+
+    private static CharacterClassDefinition CreateDefinition(
+        PlayerClass id,
+        string displayName,
+        PrimaryWeaponDefinition primaryWeapon,
+        int maxHealth,
+        float runPower,
+        float jumpStrength,
+        int maxAirJumps,
+        int tauntLengthFrames)
+    {
+        return new CharacterClassDefinition(
+            Id: id,
+            DisplayName: displayName,
+            PrimaryWeapon: primaryWeapon,
+            MaxHealth: maxHealth,
+            Width: LegacyWidth,
+            Height: LegacyHeight,
+            RunPower: runPower,
+            JumpStrength: jumpStrength,
+            MaxRunSpeed: LegacyMovementModel.GetMaxRunSpeed(runPower),
+            GroundAcceleration: LegacyMovementModel.GetContinuousRunDrive(runPower),
+            GroundDeceleration: LegacyMovementModel.GetContinuousRunDrive(runPower),
+            Gravity: LegacyMovementModel.GetGravityPerSecondSquared(),
+            JumpSpeed: LegacyMovementModel.GetJumpSpeed(jumpStrength),
+            MaxAirJumps: maxAirJumps,
+            TauntLengthFrames: tauntLengthFrames);
     }
 }

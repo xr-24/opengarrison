@@ -31,17 +31,14 @@ public partial class Game1
             (int)player.Height);
         var fallbackColor = aliveColor * visibilityAlpha;
         var spriteTint = GetPlayerColor(player, Color.White);
-        if (!GetPlayerIsSpyBackstabAnimating(player))
+        if (!TryDrawPlayerSprite(player, cameraPosition, spriteTint))
         {
-            if (!TryDrawPlayerSprite(player, cameraPosition, spriteTint))
-            {
-                _spriteBatch.Draw(_pixel, rectangle, fallbackColor);
-            }
+            _spriteBatch.Draw(_pixel, rectangle, fallbackColor);
+        }
 
-            if (!GetPlayerIsHeavyEating(player) && !player.IsTaunting)
-            {
-                TryDrawWeaponSprite(player, cameraPosition, spriteTint, visibilityAlpha);
-            }
+        if (!GetPlayerIsHeavyEating(player) && !player.IsTaunting)
+        {
+            TryDrawWeaponSprite(player, cameraPosition, spriteTint, visibilityAlpha);
         }
 
         DrawChatBubble(player, cameraPosition);

@@ -10,6 +10,8 @@ public sealed partial class PlayerEntity
         float Y,
         float HorizontalSpeed,
         float VerticalSpeed,
+        float LegacyStateTickAccumulator,
+        LegacyMovementState MovementState,
         bool IsGrounded,
         int Health,
         float Metal,
@@ -46,7 +48,9 @@ public sealed partial class PlayerEntity
         float SpyCloakAlpha,
         int SpyBackstabWindupTicksRemaining,
         int SpyBackstabRecoveryTicksRemaining,
+        int SpyBackstabVisualTicksRemaining,
         float SpyBackstabDirectionDegrees,
+        bool SpyBackstabHitboxPending,
         bool IsSpyVisibleToEnemies,
         int Kills,
         int Deaths,
@@ -68,6 +72,8 @@ public sealed partial class PlayerEntity
             Y,
             HorizontalSpeed,
             VerticalSpeed,
+            LegacyStateTickAccumulator,
+            MovementState,
             IsGrounded,
             Health,
             Metal,
@@ -104,7 +110,9 @@ public sealed partial class PlayerEntity
             SpyCloakAlpha,
             SpyBackstabWindupTicksRemaining,
             SpyBackstabRecoveryTicksRemaining,
+            SpyBackstabVisualTicksRemaining,
             SpyBackstabDirectionDegrees,
+            SpyBackstabHitboxPending,
             IsSpyVisibleToEnemies,
             Kills,
             Deaths,
@@ -126,6 +134,8 @@ public sealed partial class PlayerEntity
         Y = state.Y;
         HorizontalSpeed = state.HorizontalSpeed;
         VerticalSpeed = state.VerticalSpeed;
+        LegacyStateTickAccumulator = state.LegacyStateTickAccumulator;
+        MovementState = state.MovementState;
         IsGrounded = state.IsGrounded;
         Health = state.Health;
         Metal = state.Metal;
@@ -162,7 +172,9 @@ public sealed partial class PlayerEntity
         SpyCloakAlpha = float.Clamp(state.SpyCloakAlpha, 0f, 1f);
         SpyBackstabWindupTicksRemaining = state.SpyBackstabWindupTicksRemaining;
         SpyBackstabRecoveryTicksRemaining = state.SpyBackstabRecoveryTicksRemaining;
+        SpyBackstabVisualTicksRemaining = state.SpyBackstabVisualTicksRemaining;
         SpyBackstabDirectionDegrees = state.SpyBackstabDirectionDegrees;
+        SpyBackstabHitboxPending = state.SpyBackstabHitboxPending;
         IsSpyVisibleToEnemies = state.IsSpyVisibleToEnemies;
         Kills = state.Kills;
         Deaths = state.Deaths;
@@ -213,6 +225,8 @@ public sealed partial class PlayerEntity
         Y = y;
         HorizontalSpeed = horizontalSpeed;
         VerticalSpeed = verticalSpeed;
+        LegacyStateTickAccumulator = 0f;
+        MovementState = LegacyMovementState.None;
         IsGrounded = isGrounded;
         IsAlive = isAlive;
         Health = int.Clamp(health, 0, MaxHealth);
@@ -225,6 +239,11 @@ public sealed partial class PlayerEntity
         IsCarryingIntel = isCarryingIntel;
         IsSpyCloaked = isSpyCloaked;
         SpyCloakAlpha = float.Clamp(spyCloakAlpha, 0f, 1f);
+        SpyBackstabWindupTicksRemaining = 0;
+        SpyBackstabRecoveryTicksRemaining = 0;
+        SpyBackstabVisualTicksRemaining = 0;
+        SpyBackstabDirectionDegrees = 0f;
+        SpyBackstabHitboxPending = false;
         IsSpyVisibleToEnemies = IsSpyCloaked && SpyCloakAlpha > 0f;
         UberTicksRemaining = isUbered ? DefaultUberRefreshTicks : 0;
         IsHeavyEating = isHeavyEating;

@@ -52,6 +52,7 @@ public static class GameMakerRoomMetadataImporter
             .Concat(blueIntelBases)
             .ToArray();
         var roomObjects = ReadRoomObjects(instances);
+        var unsupportedEntities = ReadUnsupportedEntities(instances);
         var areaTransitionMarkers = ReadAreaTransitionMarkers(instances);
         var areaBoundaries = AreaTransitionMetadata.BuildAreaBoundaries(areaTransitionMarkers);
         var primaryBackgroundAssetName = ReadPrimaryBackgroundAssetName(room);
@@ -68,6 +69,7 @@ public static class GameMakerRoomMetadataImporter
             AreaBoundaries: areaBoundaries)
         {
             AreaTransitionMarkers = areaTransitionMarkers,
+            UnsupportedEntities = unsupportedEntities,
         };
     }
 
@@ -102,6 +104,18 @@ public static class GameMakerRoomMetadataImporter
             .Select(ToRoomObjectMarker)
             .Where(marker => marker.HasValue)
             .Select(marker => marker!.Value)
+            .ToArray();
+    }
+
+    private static string[] ReadUnsupportedEntities(XElement[] instances)
+    {
+        return instances
+            .Select(instance => (string?)instance.Element("object"))
+            .Where(objectName => !string.IsNullOrWhiteSpace(objectName))
+            .Select(objectName => objectName!)
+            .Where(IsUnsupportedEntity)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -210,5 +224,22 @@ public static class GameMakerRoomMetadataImporter
             "GeneratorBlue" => new RoomObjectMarker(RoomObjectType.Generator, x, y, 40f, 40f, "GeneratorS", PlayerTeam.Blue, objectName),
             _ => null,
         };
+    }
+
+    private static bool IsUnsupportedEntity(string objectName)
+    {
+        if (objectName is "SpawnPointRed" or "SpawnPointBlue" or "IntelligenceBaseRed" or "IntelligenceRed" or "IntelligenceBaseBlue" or "IntelligenceBlue")
+        {
+            return false;
+        }
+
+        if (objectName is "NextAreaO" or "PreviousAreaO")
+        {
+            return false;
+        }
+
+        return ToRoomObjectMarker(new XElement("instance",
+            new XElement("object", objectName),
+            new XElement("position", new XAttribute("x", 0f), new XAttribute("y", 0f)))) is null;
     }
 }
