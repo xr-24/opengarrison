@@ -57,8 +57,14 @@ public sealed partial class SimulationWorld
             float maxDistance,
             UpdateProjectileHit<TProjectile> updateHit)
         {
+            var rayBounds = GetRayBounds(previousX, previousY, directionX, directionY, maxDistance);
             foreach (var solid in Level.Solids)
             {
+                if (!RayBoundsMayIntersectRectangle(rayBounds, solid.Left, solid.Top, solid.Right, solid.Bottom))
+                {
+                    continue;
+                }
+
                 var distance = GetRayIntersectionDistanceWithRectangle(previousX, previousY, directionX, directionY, solid.Left, solid.Top, solid.Right, solid.Bottom, maxDistance);
                 if (distance.HasValue) { updateHit(ref nearestHit, projectile, directionX, directionY, distance.Value, null, null, null); }
             }
@@ -74,9 +80,15 @@ public sealed partial class SimulationWorld
             float maxDistance,
             UpdateProjectileHit<TProjectile> updateHit)
         {
+            var rayBounds = GetRayBounds(previousX, previousY, directionX, directionY, maxDistance);
             foreach (var roomObject in Level.RoomObjects)
             {
                 if (!IsBlockingProjectileRoomObject(roomObject)) { continue; }
+                if (!RayBoundsMayIntersectRectangle(rayBounds, roomObject.Left, roomObject.Top, roomObject.Right, roomObject.Bottom))
+                {
+                    continue;
+                }
+
                 var distance = GetRayIntersectionDistanceWithRectangle(previousX, previousY, directionX, directionY, roomObject.Left, roomObject.Top, roomObject.Right, roomObject.Bottom, maxDistance);
                 if (distance.HasValue) { updateHit(ref nearestHit, projectile, directionX, directionY, distance.Value, null, null, null); }
             }
@@ -94,9 +106,22 @@ public sealed partial class SimulationWorld
             float maxDistance,
             UpdateProjectileHit<TProjectile> updateHit)
         {
+            var rayBounds = GetRayBounds(previousX, previousY, directionX, directionY, maxDistance);
             foreach (var player in EnumerateSimulatedPlayers())
             {
                 if (!player.IsAlive || player.Team == projectileTeam || player.Id == ownerId) { continue; }
+                var playerHalfWidth = player.Width / 2f;
+                var playerHalfHeight = player.Height / 2f;
+                if (!RayBoundsMayIntersectRectangle(
+                    rayBounds,
+                    player.X - playerHalfWidth,
+                    player.Y - playerHalfHeight,
+                    player.X + playerHalfWidth,
+                    player.Y + playerHalfHeight))
+                {
+                    continue;
+                }
+
                 var distance = GetRayIntersectionDistanceWithPlayer(previousX, previousY, directionX, directionY, player, maxDistance);
                 if (distance.HasValue) { updateHit(ref nearestHit, projectile, directionX, directionY, distance.Value, player, null, null); }
             }
@@ -113,9 +138,22 @@ public sealed partial class SimulationWorld
             float maxDistance,
             UpdateProjectileHit<TProjectile> updateHit)
         {
+            var rayBounds = GetRayBounds(previousX, previousY, directionX, directionY, maxDistance);
             foreach (var sentry in _sentries)
             {
                 if (sentry.Team == projectileTeam) { continue; }
+                var sentryHalfWidth = SentryEntity.Width / 2f;
+                var sentryHalfHeight = SentryEntity.Height / 2f;
+                if (!RayBoundsMayIntersectRectangle(
+                    rayBounds,
+                    sentry.X - sentryHalfWidth,
+                    sentry.Y - sentryHalfHeight,
+                    sentry.X + sentryHalfWidth,
+                    sentry.Y + sentryHalfHeight))
+                {
+                    continue;
+                }
+
                 var distance = GetRayIntersectionDistanceWithSentry(previousX, previousY, directionX, directionY, sentry, maxDistance);
                 if (distance.HasValue) { updateHit(ref nearestHit, projectile, directionX, directionY, distance.Value, null, sentry, null); }
             }
@@ -132,10 +170,21 @@ public sealed partial class SimulationWorld
             float maxDistance,
             UpdateProjectileHit<TProjectile> updateHit)
         {
+            var rayBounds = GetRayBounds(previousX, previousY, directionX, directionY, maxDistance);
             for (var index = 0; index < _generators.Count; index += 1)
             {
                 var generator = _generators[index];
                 if (generator.Team == projectileTeam || generator.IsDestroyed)
+                {
+                    continue;
+                }
+
+                if (!RayBoundsMayIntersectRectangle(
+                    rayBounds,
+                    generator.Marker.Left,
+                    generator.Marker.Top,
+                    generator.Marker.Right,
+                    generator.Marker.Bottom))
                 {
                     continue;
                 }

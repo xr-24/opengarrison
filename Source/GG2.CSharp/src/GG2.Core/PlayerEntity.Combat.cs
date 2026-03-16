@@ -323,6 +323,11 @@ public sealed partial class PlayerEntity
 
         AdvancePyroAirblastState();
 
+        if (PrimaryCooldownTicks > 0)
+        {
+            return;
+        }
+
         if (!PrimaryWeapon.AutoReloads)
         {
             ReloadTicksUntilNextShell = 0;

@@ -41,6 +41,26 @@ public sealed class PlayerEntityLegacyTickRateTests
         Assert.Equal(40, player.CurrentShells);
     }
 
+    [Fact]
+    public void SixtyTickRate_ShotgunReloadWaitsForPrimaryCooldown()
+    {
+        var player = CreatePlayer(CharacterClassCatalog.Engineer);
+
+        Assert.True(player.TryFirePrimaryWeapon());
+        var shellsAfterShot = player.CurrentShells;
+        var reloadTicksAfterShot = player.ReloadTicksUntilNextShell;
+
+        AdvanceTicks(player, (player.PrimaryWeapon.ReloadDelayTicks * 2) - 2, 1d / 60d);
+
+        Assert.Equal(shellsAfterShot, player.CurrentShells);
+        Assert.Equal(reloadTicksAfterShot, player.ReloadTicksUntilNextShell);
+
+        AdvanceTicks(player, 2, 1d / 60d);
+
+        Assert.Equal(shellsAfterShot, player.CurrentShells);
+        Assert.True(player.ReloadTicksUntilNextShell < reloadTicksAfterShot);
+    }
+
     private static PlayerEntity CreatePlayer(CharacterClassDefinition definition)
     {
         var player = new PlayerEntity(42, definition, "TimerTest");

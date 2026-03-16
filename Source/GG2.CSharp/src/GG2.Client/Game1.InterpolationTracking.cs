@@ -35,6 +35,7 @@ public partial class Game1
             _lastRemotePlayerRenderTimeClockSeconds = -1d;
             _hasRemotePlayerRenderTime = false;
             _pendingNetworkVisualEvents.Clear();
+            ResetBackstabVisuals();
             _processedNetworkSoundEventIds.Clear();
             _processedNetworkSoundEventOrder.Clear();
             _processedNetworkVisualEventIds.Clear();
@@ -46,100 +47,100 @@ public partial class Game1
             return;
         }
 
-        var activeEntityIds = new HashSet<int>();
+        _activeInterpolatedEntityIds.Clear();
         var remotePlayerRenderTimeSeconds = GetRemotePlayerRenderTimeSeconds();
         var entityRenderTimeSeconds = GetEntityRenderTimeSeconds();
         var localPlayerStateKey = GetPlayerStateKey(_world.LocalPlayer);
         _interpolatedEntityPositions[localPlayerStateKey] = new Vector2(_world.LocalPlayer.X, _world.LocalPlayer.Y);
-        activeEntityIds.Add(localPlayerStateKey);
+        _activeInterpolatedEntityIds.Add(localPlayerStateKey);
         foreach (var player in EnumerateRemotePlayersForView())
         {
             UpdateInterpolatedRemotePlayerPosition(player, remotePlayerRenderTimeSeconds);
-            activeEntityIds.Add(player.Id);
+            _activeInterpolatedEntityIds.Add(player.Id);
         }
 
         foreach (var deadBody in _world.DeadBodies)
         {
             UpdateInterpolatedEntityPosition(deadBody.Id, deadBody.X, deadBody.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(deadBody.Id);
+            _activeInterpolatedEntityIds.Add(deadBody.Id);
         }
 
         foreach (var sentry in _world.Sentries)
         {
             UpdateInterpolatedEntityPosition(sentry.Id, sentry.X, sentry.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(sentry.Id);
+            _activeInterpolatedEntityIds.Add(sentry.Id);
         }
 
         foreach (var shot in _world.Shots)
         {
             UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(shot.Id);
+            _activeInterpolatedEntityIds.Add(shot.Id);
         }
 
         foreach (var bubble in _world.Bubbles)
         {
             UpdateInterpolatedEntityPosition(bubble.Id, bubble.X, bubble.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(bubble.Id);
+            _activeInterpolatedEntityIds.Add(bubble.Id);
         }
 
         foreach (var blade in _world.Blades)
         {
             UpdateInterpolatedEntityPosition(blade.Id, blade.X, blade.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(blade.Id);
+            _activeInterpolatedEntityIds.Add(blade.Id);
         }
 
         foreach (var shot in _world.RevolverShots)
         {
             UpdateInterpolatedEntityPosition(shot.Id, shot.X, shot.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(shot.Id);
+            _activeInterpolatedEntityIds.Add(shot.Id);
         }
 
         foreach (var needle in _world.Needles)
         {
             UpdateInterpolatedEntityPosition(needle.Id, needle.X, needle.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(needle.Id);
+            _activeInterpolatedEntityIds.Add(needle.Id);
         }
 
         foreach (var flame in _world.Flames)
         {
             UpdateInterpolatedEntityPosition(flame.Id, flame.X, flame.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(flame.Id);
+            _activeInterpolatedEntityIds.Add(flame.Id);
         }
 
         foreach (var rocket in _world.Rockets)
         {
             UpdateInterpolatedEntityPosition(rocket.Id, rocket.X, rocket.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(rocket.Id);
+            _activeInterpolatedEntityIds.Add(rocket.Id);
         }
 
         foreach (var mine in _world.Mines)
         {
             UpdateInterpolatedEntityPosition(mine.Id, mine.X, mine.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(mine.Id);
+            _activeInterpolatedEntityIds.Add(mine.Id);
         }
 
         foreach (var gib in _world.PlayerGibs)
         {
             UpdateInterpolatedEntityPosition(gib.Id, gib.X, gib.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(gib.Id);
+            _activeInterpolatedEntityIds.Add(gib.Id);
         }
 
         foreach (var bloodDrop in _world.BloodDrops)
         {
             UpdateInterpolatedEntityPosition(bloodDrop.Id, bloodDrop.X, bloodDrop.Y, entityRenderTimeSeconds);
-            activeEntityIds.Add(bloodDrop.Id);
+            _activeInterpolatedEntityIds.Add(bloodDrop.Id);
         }
 
-        var staleEntityIds = new List<int>();
+        _staleInterpolatedEntityIds.Clear();
         foreach (var entityId in _interpolatedEntityPositions.Keys)
         {
-            if (!activeEntityIds.Contains(entityId))
+            if (!_activeInterpolatedEntityIds.Contains(entityId))
             {
-                staleEntityIds.Add(entityId);
+                _staleInterpolatedEntityIds.Add(entityId);
             }
         }
 
-        foreach (var entityId in staleEntityIds)
+        foreach (var entityId in _staleInterpolatedEntityIds)
         {
             _interpolatedEntityPositions.Remove(entityId);
             _entityInterpolationTracks.Remove(entityId);

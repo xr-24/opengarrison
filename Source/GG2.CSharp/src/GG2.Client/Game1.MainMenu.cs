@@ -189,22 +189,9 @@ public partial class Game1
 
         string[] lines =
         [
-            "Gang Garrison 2",
-            "Original game by the GG2 team and Faucet Software.",
+            "Original Gang Garrison 2 Credit to Faucet Software",
             string.Empty,
-            "C# port",
-            "Current porting work, networking, and client/runtime",
-            "reconstruction live in this repository.",
-            string.Empty,
-            "Technology",
-            "MonoGame runtime, shared simulation core, and",
-            "source-backed GameMaker asset import pipeline.",
-            string.Empty,
-            "Status",
-            "This port is still in active development, but the",
-            "client, server, and core gameplay loop are playable.",
-            string.Empty,
-            "Press Escape or click Back to return."
+            "Port (Alpha) by SenatorGraves"
         ];
 
         var drawY = panel.Y + 82f;
@@ -216,14 +203,10 @@ public partial class Game1
                 continue;
             }
 
-            var scale = line.EndsWith(':') || line is "Gang Garrison 2" or "C# port" or "Technology" or "Status"
-                ? 1.05f
-                : 0.92f;
-            var color = line is "Gang Garrison 2" or "C# port" or "Technology" or "Status"
-                ? new Color(240, 228, 196)
-                : Color.White;
+            var scale = 0.98f;
+            var color = new Color(240, 228, 196);
             DrawBitmapFontText(line, new Vector2(panel.X + 30f, drawY), color, scale);
-            drawY += scale >= 1f ? 24f : 20f;
+            drawY += 22f;
         }
 
         DrawMenuButton(new Rectangle(panel.X + 30, panel.Bottom - 62, 180, 42), "Back", false);

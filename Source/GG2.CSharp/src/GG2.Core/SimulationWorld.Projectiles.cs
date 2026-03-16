@@ -86,6 +86,12 @@ public sealed partial class SimulationWorld
             directionDegrees);
         _stabAnimations.Add(stabAnimation);
         _entities.Add(stabAnimation.Id, stabAnimation);
+        RegisterVisualEffect(
+            owner.Team == PlayerTeam.Blue ? "BackstabBlue" : "BackstabRed",
+            owner.X,
+            owner.Y,
+            directionDegrees,
+            owner.Id);
     }
 
     private void SpawnStabMask(PlayerEntity owner, float directionDegrees)

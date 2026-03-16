@@ -185,7 +185,6 @@ internal sealed class NetworkGameClient : IDisposable
         if (input.Taunt) buttons |= InputButtons.Taunt;
         if (input.FirePrimary) buttons |= InputButtons.FirePrimary;
         if (input.FireSecondary) buttons |= InputButtons.FireSecondary;
-        if (input.DebugKill) buttons |= InputButtons.DebugKill;
 
         SendPendingControlCommands();
         var sequence = _nextInputSequence++;

@@ -296,6 +296,18 @@ public sealed class SimulationWorldTests
     }
 
     [Fact]
+    public void RocketSelfBlast_UsesSourceCadenceAtDifferentServerTickRates()
+    {
+        var thirtyTickWorld = CreateWorld();
+        var sixtyTickWorld = CreateWorld(60);
+
+        var thirtyTickVerticalSpeed = TriggerPointBlankRocketJump(thirtyTickWorld);
+        var sixtyTickVerticalSpeed = TriggerPointBlankRocketJump(sixtyTickWorld);
+
+        Assert.Equal(thirtyTickVerticalSpeed, sixtyTickVerticalSpeed, 3);
+    }
+
+    [Fact]
     public void MineDetonation_EmitsExplosionSoundAndVisual()
     {
         var world = CreateWorld();
@@ -343,6 +355,35 @@ public sealed class SimulationWorldTests
 
         Assert.Contains(soundEvents, soundEvent => soundEvent.SoundName == "ExplosionSnd");
         Assert.Contains(visualEvents, visualEvent => visualEvent.EffectName == "Explosion");
+    }
+
+    [Fact]
+    public void SpyBackstab_EmitsBackstabVisual()
+    {
+        var world = CreateWorld();
+        SetLocalClassAndRespawn(world, PlayerClass.Spy);
+
+        Assert.True(world.LocalPlayer.TryToggleSpyCloak());
+        world.DrainPendingVisualEvents();
+
+        world.SetLocalInput(new PlayerInputSnapshot(
+            Left: false,
+            Right: false,
+            Up: false,
+            Down: false,
+            BuildSentry: false,
+            DestroySentry: false,
+            Taunt: false,
+            FirePrimary: true,
+            FireSecondary: false,
+            AimWorldX: world.LocalPlayer.X + 32f,
+            AimWorldY: world.LocalPlayer.Y,
+            DebugKill: false));
+        world.AdvanceOneTick();
+
+        var visualEvents = world.DrainPendingVisualEvents();
+
+        Assert.Contains(visualEvents, visualEvent => visualEvent.EffectName == "BackstabRed");
     }
 
     [Fact]
@@ -954,11 +995,11 @@ public sealed class SimulationWorldTests
         Assert.False(extraPlayer.IsAlive);
     }
 
-    private static SimulationWorld CreateWorld()
+    private static SimulationWorld CreateWorld(int ticksPerSecond = SimulationConfig.DefaultTicksPerSecond)
     {
         return new SimulationWorld(new SimulationConfig
         {
-            TicksPerSecond = SimulationConfig.DefaultTicksPerSecond,
+            TicksPerSecond = ticksPerSecond,
         });
     }
 
@@ -1036,6 +1077,30 @@ public sealed class SimulationWorldTests
         AdvanceTicks(world, 150);
         Assert.True(world.LocalPlayer.IsAlive);
         Assert.Equal(playerClass, world.LocalPlayer.ClassId);
+    }
+
+    private static float TriggerPointBlankRocketJump(SimulationWorld world)
+    {
+        SetLocalClassAndRespawn(world, PlayerClass.Soldier);
+        world.TeleportLocalPlayer(30f, world.LocalPlayer.Y);
+
+        world.SetLocalInput(new PlayerInputSnapshot(
+            Left: false,
+            Right: false,
+            Up: false,
+            Down: false,
+            BuildSentry: false,
+            DestroySentry: false,
+            Taunt: false,
+            FirePrimary: true,
+            FireSecondary: false,
+            AimWorldX: -100f,
+            AimWorldY: world.LocalPlayer.Y,
+            DebugKill: false));
+        world.AdvanceOneTick();
+        world.SetLocalInput(default);
+        Assert.True(AdvanceUntilExplosion(world));
+        return world.LocalPlayer.VerticalSpeed;
     }
 
     private static bool AdvanceUntilExplosion(SimulationWorld world, int maxTicks = 60)

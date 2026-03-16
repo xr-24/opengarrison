@@ -146,27 +146,34 @@ public partial class Game1
 
     private float GetPlayerVisibilityAlpha(PlayerEntity player)
     {
-        if (!player.IsAlive || !GetPlayerIsSpyCloaked(player))
+        if (!player.IsAlive)
         {
             return 1f;
         }
 
+        var bodyVisibilityScale = GetSpyBackstabBodyVisibilityScale(player);
+        if (!GetPlayerIsSpyCloaked(player))
+        {
+            return bodyVisibilityScale;
+        }
+
         if (_networkClient.IsSpectator)
         {
-            return 1f;
+            return bodyVisibilityScale;
         }
 
         var cloakAlpha = Math.Clamp(GetPlayerSpyCloakAlpha(player), 0f, 1f);
         if (ReferenceEquals(player, _world.LocalPlayer))
         {
-            return Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha);
+            return Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha) * bodyVisibilityScale;
         }
 
         if (player.Team == _world.LocalPlayer.Team)
         {
-            return GetPlayerIsSpyBackstabReady(player)
+            var allyAlpha = GetPlayerIsSpyBackstabReady(player)
                 ? Math.Max(cloakAlpha, PlayerEntity.SpyMinAllyCloakAlpha)
                 : cloakAlpha;
+            return allyAlpha * bodyVisibilityScale;
         }
 
         if (IsSpyHiddenFromLocalViewer(player))
@@ -174,7 +181,7 @@ public partial class Game1
             return 0f;
         }
 
-        return cloakAlpha;
+        return cloakAlpha * bodyVisibilityScale;
     }
 
     private bool GetPlayerIsSpyBackstabReady(PlayerEntity player)
@@ -196,6 +203,44 @@ public partial class Game1
         }
 
         return _predictedLocalActionState.SpyBackstabVisualTicksRemaining > 0;
+    }
+
+    private int GetPlayerSpyBackstabVisualTicksRemaining(PlayerEntity player)
+    {
+        if (!IsUsingPredictedLocalState(player))
+        {
+            return player.SpyBackstabVisualTicksRemaining;
+        }
+
+        return _predictedLocalActionState.SpyBackstabVisualTicksRemaining;
+    }
+
+    private float GetSpyBackstabBodyVisibilityScale(PlayerEntity player)
+    {
+        if (player.ClassId != PlayerClass.Spy)
+        {
+            return 1f;
+        }
+
+        var visualTicksRemaining = GetPlayerSpyBackstabVisualTicksRemaining(player);
+        if (visualTicksRemaining <= 0)
+        {
+            return 1f;
+        }
+
+        const int bodyFadeTicks = 4;
+        var elapsedTicks = StabAnimEntity.TotalLifetimeTicks - visualTicksRemaining;
+        if (elapsedTicks < bodyFadeTicks)
+        {
+            return Math.Clamp(1f - (elapsedTicks / (float)bodyFadeTicks), 0f, 1f);
+        }
+
+        if (visualTicksRemaining <= StabAnimEntity.FadeOutTicks)
+        {
+            return Math.Clamp(1f - (visualTicksRemaining / (float)StabAnimEntity.FadeOutTicks), 0f, 1f);
+        }
+
+        return 0f;
     }
 
     private bool IsSpyHiddenFromLocalViewer(PlayerEntity player)

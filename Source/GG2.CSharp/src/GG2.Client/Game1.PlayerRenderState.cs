@@ -9,13 +9,17 @@ namespace GG2.Client;
 
 public partial class Game1
 {
+    private const float PlayerWeaponFlashDurationSeconds = 1f / LegacyMovementModel.SourceTicksPerSecond;
+    private readonly HashSet<int> _activePlayerRenderStateIds = new();
+    private readonly List<int> _stalePlayerRenderStateIds = new();
+
     private void UpdatePlayerRenderState(PlayerEntity player)
     {
         var playerStateKey = GetPlayerStateKey(player);
         if (!player.IsAlive)
         {
             _playerAnimationImages.Remove(playerStateKey);
-            _playerWeaponFlashTicks.Remove(playerStateKey);
+            _playerWeaponFlashTimes.Remove(playerStateKey);
             _playerPreviousAmmoCounts.Remove(playerStateKey);
             _playerPreviousCooldownTicks.Remove(playerStateKey);
             _playerPreviousRenderPositions.Remove(playerStateKey);
@@ -26,11 +30,12 @@ public partial class Game1
         var observedRenderVelocity = SampleObservedRenderVelocity(player);
         var renderHorizontalSpeed = GetPlayerRenderHorizontalSpeed(player, observedRenderVelocity);
         var renderVerticalSpeed = GetPlayerRenderVerticalSpeed(player, observedRenderVelocity);
-        var horizontalStepSpeed = GetPlayerAnimationStepSpeed(renderHorizontalSpeed);
-        var verticalStepSpeed = GetPlayerAnimationStepSpeed(renderVerticalSpeed);
+        var horizontalSourceStepSpeed = GetPlayerAnimationSourceStepSpeed(renderHorizontalSpeed);
+        var verticalSourceStepSpeed = GetPlayerAnimationSourceStepSpeed(renderVerticalSpeed);
+        var animationElapsedSeconds = GetPlayerAnimationElapsedSeconds();
         var isRemoteNetworkPlayer = _networkClient.IsConnected && !ReferenceEquals(player, _world.LocalPlayer);
         var animationImage = _playerAnimationImages.GetValueOrDefault(playerStateKey, 0f);
-        if (horizontalStepSpeed < 0.2f)
+        if (horizontalSourceStepSpeed < 0.2f)
         {
             animationImage = 0f;
         }
@@ -45,7 +50,7 @@ public partial class Game1
 
         if (isRemoteNetworkPlayer && !player.IsGrounded)
         {
-            appearsAirborne = verticalStepSpeed > 0.35f;
+            appearsAirborne = verticalSourceStepSpeed > 0.35f;
         }
 
         if (appearsAirborne)
@@ -53,56 +58,56 @@ public partial class Game1
             animationImage = 1f;
         }
 
-        animationImage = (animationImage + horizontalStepSpeed / 20f) % 2f;
+        animationImage = (animationImage + GetPlayerAnimationAdvance(renderHorizontalSpeed, animationElapsedSeconds)) % 2f;
         _playerAnimationImages[playerStateKey] = animationImage;
 
-        var flashTicks = _playerWeaponFlashTicks.GetValueOrDefault(playerStateKey, 0);
-        if (flashTicks > 0)
+        var flashTimeRemaining = _playerWeaponFlashTimes.GetValueOrDefault(playerStateKey, 0f);
+        if (flashTimeRemaining > 0f)
         {
-            flashTicks -= 1;
+            flashTimeRemaining = MathF.Max(0f, flashTimeRemaining - animationElapsedSeconds);
         }
 
         var previousAmmo = _playerPreviousAmmoCounts.GetValueOrDefault(playerStateKey, player.CurrentShells);
         var previousCooldown = _playerPreviousCooldownTicks.GetValueOrDefault(playerStateKey, player.PrimaryCooldownTicks);
         if (player.PrimaryCooldownTicks > 0 && (player.CurrentShells < previousAmmo || previousCooldown <= 0))
         {
-            flashTicks = 1;
+            flashTimeRemaining = PlayerWeaponFlashDurationSeconds;
         }
 
-        _playerWeaponFlashTicks[playerStateKey] = flashTicks;
+        _playerWeaponFlashTimes[playerStateKey] = flashTimeRemaining;
         _playerPreviousAmmoCounts[playerStateKey] = player.CurrentShells;
         _playerPreviousCooldownTicks[playerStateKey] = player.PrimaryCooldownTicks;
     }
 
     private void RemoveStalePlayerRenderState()
     {
-        var activePlayerIds = new HashSet<int>();
+        _activePlayerRenderStateIds.Clear();
         if (_world.LocalPlayer.IsAlive)
         {
-            activePlayerIds.Add(GetPlayerStateKey(_world.LocalPlayer));
+            _activePlayerRenderStateIds.Add(GetPlayerStateKey(_world.LocalPlayer));
         }
 
         foreach (var player in EnumerateRemotePlayersForView())
         {
             if (player.IsAlive)
             {
-                activePlayerIds.Add(GetPlayerStateKey(player));
+                _activePlayerRenderStateIds.Add(GetPlayerStateKey(player));
             }
         }
 
-        var stalePlayerIds = new List<int>();
+        _stalePlayerRenderStateIds.Clear();
         foreach (var playerId in _playerAnimationImages.Keys)
         {
-            if (!activePlayerIds.Contains(playerId))
+            if (!_activePlayerRenderStateIds.Contains(playerId))
             {
-                stalePlayerIds.Add(playerId);
+                _stalePlayerRenderStateIds.Add(playerId);
             }
         }
 
-        foreach (var playerId in stalePlayerIds)
+        foreach (var playerId in _stalePlayerRenderStateIds)
         {
             _playerAnimationImages.Remove(playerId);
-            _playerWeaponFlashTicks.Remove(playerId);
+            _playerWeaponFlashTimes.Remove(playerId);
             _playerPreviousAmmoCounts.Remove(playerId);
             _playerPreviousCooldownTicks.Remove(playerId);
             _playerPreviousRenderPositions.Remove(playerId);
@@ -110,9 +115,21 @@ public partial class Game1
         }
     }
 
-    private float GetPlayerAnimationStepSpeed(float speedPerSecond)
+    private float GetPlayerAnimationElapsedSeconds()
     {
-        return MathF.Abs(speedPerSecond) * (float)_config.FixedDeltaSeconds;
+        return MathF.Max(0f, _clientUpdateElapsedSeconds);
+    }
+
+    private static float GetPlayerAnimationSourceStepSpeed(float speedPerSecond)
+    {
+        return MathF.Abs(speedPerSecond) / LegacyMovementModel.SourceTicksPerSecond;
+    }
+
+    private static float GetPlayerAnimationAdvance(float speedPerSecond, float elapsedSeconds)
+    {
+        return elapsedSeconds <= 0f
+            ? 0f
+            : MathF.Abs(speedPerSecond) * elapsedSeconds / 20f;
     }
 
     private Vector2 SampleObservedRenderVelocity(PlayerEntity player)

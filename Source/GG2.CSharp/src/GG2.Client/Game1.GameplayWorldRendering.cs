@@ -36,6 +36,7 @@ public partial class Game1
         DrawGameplayMapMarkers(cameraPosition, hasLevelBackground, centerLine, centerColumn, worldTopBorder, worldBottomBorder, worldLeftBorder, worldRightBorder, spawnRectangle);
         DrawGameplayRemains(cameraPosition);
         DrawGameplayPlayers(cameraPosition, playerRectangle);
+        DrawBackstabVisuals(cameraPosition);
     }
 
     private void DrawFallbackLevelSolids(Vector2 cameraPosition, bool hasLevelBackground)

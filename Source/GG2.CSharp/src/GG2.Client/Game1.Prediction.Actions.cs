@@ -361,6 +361,7 @@ public partial class Game1
             return false;
         }
 
+        SpawnBackstabVisual(player.Id, player.Team, player.X, player.Y, player.AimDirectionDegrees);
         SyncPredictedLocalPlayerState(player);
         return true;
     }

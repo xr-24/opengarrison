@@ -82,11 +82,6 @@ public partial class Game1
             DrawShotProjectile(shot, cameraPosition, new Color(140, 210, 255), new Color(255, 235, 170));
         }
 
-        foreach (var stabAnimation in _world.StabAnimations)
-        {
-            DrawStabAnimation(stabAnimation, cameraPosition);
-        }
-
         foreach (var stabMask in _world.StabMasks)
         {
             DrawStabMask(stabMask, cameraPosition);

@@ -67,6 +67,11 @@ public partial class Game1
 
     private void DrawAmmoHud()
     {
+        if (!_world.LocalPlayer.IsAlive)
+        {
+            return;
+        }
+
         if (_world.LocalPlayer.PrimaryWeapon.Kind == PrimaryWeaponKind.FlameThrower)
         {
             DrawResourceHud("GasAmmoS", _world.LocalPlayer.CurrentShells / 2f, 100f, showCount: false, barXOffset: 689f, barWidth: 34f);

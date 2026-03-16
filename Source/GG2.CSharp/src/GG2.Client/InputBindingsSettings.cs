@@ -21,8 +21,6 @@ public sealed class InputBindingsSettings
 
     public Keys Taunt { get; set; } = Keys.F;
 
-    public Keys DebugKill { get; set; } = Keys.K;
-
     public Keys ShowScoreboard { get; set; } = Keys.LeftShift;
 
     public Keys ChangeTeam { get; set; } = Keys.N;
@@ -72,7 +70,6 @@ public sealed class InputBindingsSettings
         document.SetInt("Controls", "changeClass", (int)ChangeClass);
         document.SetInt("Controls", "showScores", (int)ShowScoreboard);
         document.SetInt("Controls", "console", (int)ToggleConsole);
-        document.SetInt("Controls", "debugKill", (int)DebugKill);
 
         document.Save(resolvedPath);
     }
@@ -91,7 +88,6 @@ public sealed class InputBindingsSettings
             ChangeClass = ReadKey(document, "changeClass", Keys.M),
             ShowScoreboard = ReadKey(document, "showScores", Keys.LeftShift),
             ToggleConsole = ReadKey(document, "console", Keys.OemTilde),
-            DebugKill = ReadKey(document, "debugKill", Keys.K),
         };
     }
 

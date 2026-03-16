@@ -20,8 +20,7 @@ public partial class Game1
             || _inputBindings.ChangeTeam == key
             || _inputBindings.ChangeClass == key
             || _inputBindings.ShowScoreboard == key
-            || _inputBindings.ToggleConsole == key
-            || _inputBindings.DebugKill == key;
+            || _inputBindings.ToggleConsole == key;
     }
 
     private bool IsChatShortcutHeld(KeyboardState keyboard)

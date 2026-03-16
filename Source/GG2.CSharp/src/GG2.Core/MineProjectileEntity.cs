@@ -2,12 +2,12 @@ namespace GG2.Core;
 
 public sealed class MineProjectileEntity : SimulationEntity
 {
-    public const float BlastRadius = 72f;
+    public const float BlastRadius = 60f;
     public const float BaseExplosionDamage = 25f;
     public const float MaxExplosionDamage = 50f;
     public const float GravityPerTick = 0.2f;
     public const float MaxFallSpeed = 8f;
-    public const float BlastImpulse = 12f;
+    public const float BlastImpulse = 10f;
 
     public MineProjectileEntity(
         int id,
