@@ -600,16 +600,26 @@ public partial class Game1
 
     private void CaptureProjectileInterpolationTarget(int entityId, float x, float y, Vector2 velocity, float maxExtrapolationDistance, double snapshotTimeSeconds)
     {
-        var extrapolationDurationSeconds = MathF.Min(_networkSnapshotInterpolationDurationSeconds * 0.6f, 0.05f);
+        var extrapolationDurationSeconds = Math.Clamp(
+            MathF.Max(
+                _networkSnapshotInterpolationDurationSeconds * 2f,
+                1f / LegacyMovementModel.SourceTicksPerSecond),
+            1f / LegacyMovementModel.SourceTicksPerSecond,
+            ProjectileInterpolationExtrapolationCeilingSeconds);
+        var projectileVelocityPerSecond = velocity * _config.TicksPerSecond;
+        var projectileMaxExtrapolationDistance = MathF.Max(
+            maxExtrapolationDistance,
+            projectileVelocityPerSecond.Length() * extrapolationDurationSeconds);
         CaptureEntityInterpolationTarget(
             true,
             entityId,
             x,
             y,
-            velocity,
+            projectileVelocityPerSecond,
             extrapolationDurationSeconds,
-            maxExtrapolationDistance,
-            snapshotTimeSeconds);
+            projectileMaxExtrapolationDistance,
+            snapshotTimeSeconds,
+            ignoreUnchangedSample: true);
     }
 
     private void CaptureEntityInterpolationTarget(
@@ -620,7 +630,8 @@ public partial class Game1
         Vector2 velocity,
         float extrapolationDurationSeconds,
         float maxExtrapolationDistance,
-        double snapshotTimeSeconds)
+        double snapshotTimeSeconds,
+        bool ignoreUnchangedSample = false)
     {
         if (!isActive)
         {
@@ -637,7 +648,8 @@ public partial class Game1
             velocity,
             snapshotTimeSeconds,
             extrapolationDurationSeconds,
-            maxExtrapolationDistance);
+            maxExtrapolationDistance,
+            ignoreUnchangedSample);
         _entityInterpolationTracks.Remove(entityId);
     }
 
@@ -661,7 +673,8 @@ public partial class Game1
         Vector2 velocity,
         double snapshotTimeSeconds,
         float extrapolationDurationSeconds,
-        float maxExtrapolationDistance)
+        float maxExtrapolationDistance,
+        bool ignoreUnchangedSample = false)
         where TKey : notnull
     {
         var sample = new EntitySnapshotSample(
@@ -679,6 +692,13 @@ public partial class Game1
         if (history.Count > 0)
         {
             var latest = history[^1];
+            if (ignoreUnchangedSample
+                && latest.Position == sample.Position
+                && latest.Velocity == sample.Velocity)
+            {
+                return;
+            }
+
             if (sample.TimeSeconds <= latest.TimeSeconds)
             {
                 history[^1] = sample;
