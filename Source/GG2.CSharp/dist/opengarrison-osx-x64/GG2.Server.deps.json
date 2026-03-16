@@ -11,6 +11,7 @@
         "dependencies": {
           "GG2.Core": "1.0.0",
           "GG2.Protocol": "1.0.0",
+          "GG2.Server.Plugins.Abstractions": "1.0.0",
           "runtimepack.Microsoft.NETCore.App.Runtime.osx-x64": "8.0.24"
         },
         "runtime": {
@@ -737,29 +738,18 @@
           }
         }
       },
-      "Microsoft.Win32.SystemEvents/8.0.0": {
+      "SixLabors.ImageSharp/3.1.12": {
         "runtime": {
-          "lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
-            "assemblyVersion": "8.0.0.0",
-            "fileVersion": "8.0.23.53103"
-          }
-        }
-      },
-      "System.Drawing.Common/8.0.0": {
-        "dependencies": {
-          "Microsoft.Win32.SystemEvents": "8.0.0"
-        },
-        "runtime": {
-          "lib/net8.0/System.Drawing.Common.dll": {
-            "assemblyVersion": "8.0.0.0",
-            "fileVersion": "8.0.23.53105"
+          "lib/net6.0/SixLabors.ImageSharp.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.1.12.0"
           }
         }
       },
       "GG2.Core/1.0.0": {
         "dependencies": {
           "GG2.Protocol": "1.0.0",
-          "System.Drawing.Common": "8.0.0"
+          "SixLabors.ImageSharp": "3.1.12"
         },
         "runtime": {
           "GG2.Core.dll": {
@@ -771,6 +761,17 @@
       "GG2.Protocol/1.0.0": {
         "runtime": {
           "GG2.Protocol.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "GG2.Server.Plugins.Abstractions/1.0.0": {
+        "dependencies": {
+          "GG2.Core": "1.0.0"
+        },
+        "runtime": {
+          "GG2.Server.Plugins.Abstractions.dll": {
             "assemblyVersion": "1.0.0",
             "fileVersion": "1.0.0.0"
           }
@@ -789,19 +790,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Microsoft.Win32.SystemEvents/8.0.0": {
+    "SixLabors.ImageSharp/3.1.12": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-9opKRyOKMCi2xJ7Bj7kxtZ1r9vbzosMvRrdEhVhDz8j8MoBGgB+WmC94yH839NPH+BclAjtQ/pyagvi/8gDLkw==",
-      "path": "microsoft.win32.systemevents/8.0.0",
-      "hashPath": "microsoft.win32.systemevents.8.0.0.nupkg.sha512"
-    },
-    "System.Drawing.Common/8.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-JkbHJjtI/dWc5dfmEdJlbe3VwgZqCkZRtfuWFh5GOv0f+gGCfBtzMpIVkmdkj2AObO9y+oiOi81UGwH3aBYuqA==",
-      "path": "system.drawing.common/8.0.0",
-      "hashPath": "system.drawing.common.8.0.0.nupkg.sha512"
+      "sha512": "sha512-iAg6zifihXEFS/t7fiHhZBGAdCp3FavsF4i2ZIDp0JfeYeDVzvmlbY1CNhhIKimaIzrzSi5M/NBFcWvZT2rB/A==",
+      "path": "sixlabors.imagesharp/3.1.12",
+      "hashPath": "sixlabors.imagesharp.3.1.12.nupkg.sha512"
     },
     "GG2.Core/1.0.0": {
       "type": "project",
@@ -809,6 +803,11 @@
       "sha512": ""
     },
     "GG2.Protocol/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "GG2.Server.Plugins.Abstractions/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

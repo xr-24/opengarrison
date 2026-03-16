@@ -23,10 +23,10 @@ public static class GameMakerAssetManifestImporter
 
         var sourceRootPath = Path.GetDirectoryName(sourceRootFile)!;
         var sprites = ImportSprites(Path.Combine(sourceRootPath, "Sprites"));
-        var exeAssetsSpriteMetadata = ProjectSourceLocator.FindFile("EXEassets/Sprites/gg2FontS.xml");
-        if (exeAssetsSpriteMetadata is not null)
+        var modernAssetSpriteMetadata = ProjectSourceLocator.FindFile("GML-GG2-Modern/Sprites/gg2FontS.xml");
+        if (modernAssetSpriteMetadata is not null)
         {
-            ImportSprite(exeAssetsSpriteMetadata, sprites);
+            ImportSprite(modernAssetSpriteMetadata, sprites);
         }
 
         return new GameMakerAssetManifest(

@@ -74,7 +74,7 @@ exec "`$SCRIPT_DIR/$ExecutableName" "`$@"
     Set-Content -Path $Path -Value $scriptContents -NoNewline
 }
 
-function Copy-MinimalExeAssets {
+function Copy-MinimalModernAssets {
     param(
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceRoot,
@@ -82,16 +82,17 @@ function Copy-MinimalExeAssets {
         [string]$StagingRoot
     )
 
+    $modernAssetDirectoryName = "GML-GG2-Modern"
     $requiredEntries = @(
-        @{ Source = "EXEassets\Sprites\gg2FontS.xml"; Target = "Assets\EXEassets\Sprites\gg2FontS.xml" },
-        @{ Source = "EXEassets\Sprites\gg2FontS.images"; Target = "Assets\EXEassets\Sprites\gg2FontS.images" }
+        @{ Source = "$modernAssetDirectoryName\Sprites\gg2FontS.xml"; Target = "Assets\$modernAssetDirectoryName\Sprites\gg2FontS.xml" },
+        @{ Source = "$modernAssetDirectoryName\Sprites\gg2FontS.images"; Target = "Assets\$modernAssetDirectoryName\Sprites\gg2FontS.images" }
     )
 
     foreach ($entry in $requiredEntries) {
         $sourcePath = Join-Path $WorkspaceRoot $entry.Source
         $targetPath = Join-Path $StagingRoot $entry.Target
         if (-not (Test-Path $sourcePath)) {
-            throw "Required EXEassets packaging source is missing: $sourcePath"
+            throw "Required $modernAssetDirectoryName packaging source is missing: $sourcePath"
         }
 
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
@@ -207,7 +208,7 @@ try {
             Copy-Item $sourcePath $targetPath -Recurse -Force
         }
 
-        Copy-MinimalExeAssets -WorkspaceRoot $workspaceRoot -StagingRoot $stagingRoot
+        Copy-MinimalModernAssets -WorkspaceRoot $workspaceRoot -StagingRoot $stagingRoot
 
         Copy-Item (Join-Path $repoRoot "packaging\config\client.settings.json") (Join-Path $stagingRoot "config\client.settings.json") -Force
         Copy-Item (Join-Path $repoRoot "packaging\config\input.bindings.json") (Join-Path $stagingRoot "config\input.bindings.json") -Force
