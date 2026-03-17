@@ -14,3 +14,8 @@
 3. Build with `dotnet build "C:/path/to/cloned/repo/GG2.sln" -c Release`
 4. Distribute using instructions in GG2.CSharp/packaging/DISTRO QUICKSTART.txt
 5. Do whatever TF you want bro it's a free country and my files are a fucking mess. please help
+
+
+### Discord
+
+https://discord.gg/VbDhhj5jfp
