@@ -4,8 +4,8 @@
 
 1. Download latest `.zip` or `.tar` from Releases
 2. Extract somewhere
-3. Run GG2.Client from that directory (linux/mac: `sh run-client.sh`)
-4. To host: Run GG2.ServerLauncher
+3. Run OpenGarrison.Client from that directory (linux/mac: `sh run-client.sh`)
+4. To host: Run OpenGarrison.ServerLauncher
 
 ### How to Do Stuff
 
